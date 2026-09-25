@@ -109,9 +109,24 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .header-jp-time{font-size:.68rem;color:var(--accent-gold);white-space:nowrap;font-weight:600}
 
 /* TABS */
+.tabs-wrapper{
+  position:relative;max-width:1100px;margin:0 auto;
+}
+.tabs-wrapper::before,.tabs-wrapper::after{
+  content:'';position:absolute;top:0;bottom:0;width:28px;z-index:2;pointer-events:none;
+  transition:opacity .2s;
+}
+.tabs-wrapper::before{
+  left:0;background:linear-gradient(to right,rgba(12,14,20,.92) 0%,transparent 100%);
+}
+.tabs-wrapper::after{
+  right:0;background:linear-gradient(to left,rgba(12,14,20,.92) 0%,transparent 100%);
+}
+.tabs-wrapper.at-start::before{opacity:0}
+.tabs-wrapper.at-end::after{opacity:0}
 .tabs{
   display:flex;gap:1px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
-  padding:0 .5rem 6px;max-width:1100px;margin:0 auto;
+  padding:0 .75rem 6px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
 }
 .tabs::-webkit-scrollbar{display:none}
 .tab-btn{
@@ -423,7 +438,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 @media(max-width:768px){
   .header-inner{flex-wrap:wrap;height:auto;padding:.5rem 0}
   .header-dates{display:none}
-  .tabs{width:100%;padding-bottom:.5rem}
+  .tabs{width:100%;padding-bottom:.5rem;padding-left:.5rem;padding-right:.5rem}
   .tab-btn{padding:5px 10px;font-size:.72rem}
   .main{padding:.75rem}
   .stats-row{grid-template-columns:repeat(2,1fr)}
@@ -620,6 +635,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 }
 .expense-balance-name{font-size:.75rem;font-weight:700;margin-bottom:2px}
 .expense-balance-val{font-size:1.1rem;font-weight:800}
+.sync-status{display:inline-flex;align-items:center;gap:4px;font-size:.68rem;padding:2px 8px;border-radius:10px;position:absolute;top:8px;right:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.sync-status.online .sync-dot{background:#4ade80}
+.sync-status.offline .sync-dot{background:#f87171;animation:pulse-dot 1.5s infinite}
+.sync-status.syncing .sync-dot{background:#fbbf24;animation:pulse-dot .8s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
 .expense-settle{
   margin-top:.75rem;padding:.75rem;border-radius:var(--radius-sm);
   background:var(--surface2);text-align:center;font-size:.82rem;
@@ -667,6 +688,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .pv-progress-text{font-size:1.1rem;font-weight:800}
 .pv-progress-label{font-size:.72rem;color:var(--text-muted);margin-top:2px}
 </style>
+<!-- Firebase SDK (compat for simple global usage) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -685,19 +709,21 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
       </div>
     </div>
   </div>
-  <nav class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="ruta">🗺️ Ruta</button>
-    <button class="tab-btn" data-tab="itinerario">📅 Itinerario</button>
-    <button class="tab-btn" data-tab="previaje">📦 Pre-viaje</button>
-    <button class="tab-btn" data-tab="alojamiento">🏠 Alojamiento</button>
-    <button class="tab-btn" data-tab="guia">📍 Guía</button>
-    <button class="tab-btn" data-tab="restaurantes">🍜 Restaurantes</button>
-    <button class="tab-btn" data-tab="celiaco">🌾 Celíaco</button>
-    <button class="tab-btn" data-tab="tools">💸 Gastos</button>
-    <button class="tab-btn" data-tab="presupuesto">💰 Presupuesto</button>
-    <button class="tab-btn" data-tab="glosario">📖 Glosario</button>
-    <button class="tab-btn" data-tab="tips">📋 Tips</button>
-  </nav>
+  <div class="tabs-wrapper at-start" id="tabs-wrapper">
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="ruta">🗺️ Ruta</button>
+      <button class="tab-btn" data-tab="itinerario">📅 Itinerario</button>
+      <button class="tab-btn" data-tab="previaje">📦 Pre-viaje</button>
+      <button class="tab-btn" data-tab="alojamiento">🏠 Alojamiento</button>
+      <button class="tab-btn" data-tab="guia">📍 Guía</button>
+      <button class="tab-btn" data-tab="restaurantes">🍜 Restaurantes</button>
+      <button class="tab-btn" data-tab="celiaco">🌾 Celíaco</button>
+      <button class="tab-btn" data-tab="tools">💸 Gastos</button>
+      <button class="tab-btn" data-tab="presupuesto">💰 Presupuesto</button>
+      <button class="tab-btn" data-tab="glosario">📖 Glosario</button>
+      <button class="tab-btn" data-tab="tips">📋 Tips</button>
+    </nav>
+  </div>
 </header>
 
 <main class="main">
@@ -853,6 +879,58 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 </div>
 
 <script>
+// ===================== FIREBASE =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyCOIP_cv0orkaLTzC_W2zyRHePMLYIcB5M",
+  authDomain: "japan-trip-7ef65.firebaseapp.com",
+  projectId: "japan-trip-7ef65",
+  storageBucket: "japan-trip-7ef65.firebasestorage.app",
+  messagingSenderId: "1078999471635",
+  appId: "1:1078999471635:web:6269f9b472be6f5de1d1e6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+// Enable offline persistence — data survives no-connection
+db.enablePersistence({synchronizeTabs: true}).catch(err => {
+  if (err.code === 'failed-precondition') console.warn('Firestore persistence: multiple tabs open');
+  else if (err.code === 'unimplemented') console.warn('Firestore persistence: browser not supported');
+});
+const expensesRef = db.collection('expenses');
+
+// In-memory cache of expenses (kept in sync by onSnapshot)
+let _expenses = [];
+let _firestoreReady = false;
+
+// Sync status tracking
+let _syncStatus = 'syncing'; // 'online' | 'offline' | 'syncing'
+function setSyncStatus(status) {
+  _syncStatus = status;
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.className = 'sync-status ' + status;
+  const labels = {online: 'Sincronizado', offline: 'Sin conexión', syncing: 'Sincronizando…'};
+  el.innerHTML = '<span class="sync-dot"></span>' + labels[status];
+}
+
+// Real-time listener — fires on local + remote changes
+expensesRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true}, snapshot => {
+  _expenses = snapshot.docs.map(doc => ({_docId: doc.id, ...doc.data()}));
+  _firestoreReady = true;
+  // Detect if data came from server or local cache
+  const fromCache = snapshot.metadata.fromCache;
+  const hasPending = snapshot.metadata.hasPendingWrites;
+  if (hasPending) setSyncStatus('syncing');
+  else if (fromCache) setSyncStatus('offline');
+  else setSyncStatus('online');
+  // Also keep localStorage as a backup cache
+  try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+  // Re-render UI
+  renderExpenses();
+}, err => {
+  console.error('Firestore listener error:', err);
+  setSyncStatus('offline');
+});
+
 // ===================== DATA =====================
 
 const CITIES = {
@@ -1631,12 +1709,28 @@ function flyTo(cityKey) {
 }
 
 // ===================== TABS =====================
+const tabsNav = document.getElementById('tabs');
+const tabsWrapper = document.getElementById('tabs-wrapper');
+
+function updateTabFades() {
+  if (!tabsNav || !tabsWrapper) return;
+  const sl = tabsNav.scrollLeft;
+  const maxScroll = tabsNav.scrollWidth - tabsNav.clientWidth;
+  tabsWrapper.classList.toggle('at-start', sl < 8);
+  tabsWrapper.classList.toggle('at-end', sl > maxScroll - 8);
+}
+tabsNav.addEventListener('scroll', updateTabFades, {passive: true});
+window.addEventListener('resize', updateTabFades);
+setTimeout(updateTabFades, 100);
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    // Scroll active tab into view, centered
+    btn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
     if (btn.dataset.tab === 'ruta' && map) setTimeout(() => map.invalidateSize(), 100);
   });
 });
@@ -2950,9 +3044,10 @@ function renderTools() {
       </div>
     </div>
 
-    <div class="fx-box">
+    <div class="fx-box" style="position:relative">
       <div class="card-title">💸 Gastos</div>
-      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">Registrad cada gasto del viaje. Se actualiza automáticamente en Presupuesto y en Ruta.</p>
+      <span id="sync-indicator" class="sync-status syncing"><span class="sync-dot"></span>Sincronizando…</span>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">Registrad cada gasto del viaje. Se sincroniza entre dispositivos en tiempo real.</p>
       <div class="expense-add-row">
         <input type="number" id="exp-amount" placeholder="Cantidad" style="min-width:70px">
         <select id="exp-currency"><option value="jpy">¥ JPY</option><option value="eur">€ EUR</option></select>
@@ -3004,10 +3099,10 @@ function fxConvert(from) {
 }
 
 function getExpenses() {
+  // Return in-memory cache (kept in sync by Firestore onSnapshot)
+  if (_firestoreReady) return _expenses;
+  // Fallback to localStorage while Firestore loads
   try { return JSON.parse(localStorage.getItem('jp-expenses') || '[]'); } catch(e) { return []; }
-}
-function saveExpenses(list) {
-  try { localStorage.setItem('jp-expenses', JSON.stringify(list)); } catch(e) {}
 }
 function addExpense() {
   const amount = parseFloat(document.getElementById('exp-amount').value);
@@ -3019,17 +3114,25 @@ function addExpense() {
   const note = document.getElementById('exp-note').value;
   const eur = currency === 'eur' ? amount : +(amount / fxRate).toFixed(2);
   const jpy = currency === 'jpy' ? amount : Math.round(amount * fxRate);
-  const expenses = getExpenses();
-  expenses.push({id: Date.now(), date: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short'}), cat, payer: payer || 'david', forWhom: forWhom || 'both', note, eur, jpy, currency});
-  saveExpenses(expenses);
+  // Write to Firestore (auto-syncs to all devices)
+  expensesRef.add({
+    id: Date.now(),
+    date: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short'}),
+    cat, payer: payer || 'david', forWhom: forWhom || 'both',
+    note, eur, jpy, currency,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err => console.error('Error adding expense:', err));
   document.getElementById('exp-amount').value = '';
   document.getElementById('exp-note').value = '';
-  renderExpenses();
+  // UI updates automatically via onSnapshot
 }
 function deleteExpense(id) {
-  const expenses = getExpenses().filter(e => e.id !== id);
-  saveExpenses(expenses);
-  renderExpenses();
+  // Find the Firestore doc ID for this expense
+  const exp = _expenses.find(e => e.id === id);
+  if (exp && exp._docId) {
+    expensesRef.doc(exp._docId).delete().catch(err => console.error('Error deleting expense:', err));
+  }
+  // UI updates automatically via onSnapshot
 }
 function updateStatCards() {
   const expenses = getExpenses();
