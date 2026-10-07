@@ -664,7 +664,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .pv-check input:checked + .check-mark{background:var(--accent-green);border-color:var(--accent-green);color:#000}
 .pv-check input:checked + .check-mark::after{content:'✓';font-size:12px;font-weight:700}
 .pv-body{flex:1;min-width:0}
-.pv-text{font-size:.82rem;font-weight:600;line-height:1.4}
+.pv-text{font-size:.82rem;font-weight:600;line-height:1.4;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.pv-day-badge{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(116,192,252,.15);color:var(--accent-blue);white-space:nowrap;letter-spacing:.02em}
 .pv-detail{font-size:.72rem;color:var(--text-muted);margin-top:3px;line-height:1.5}
 .pv-link{
   display:inline-flex;align-items:center;gap:4px;margin-top:5px;
@@ -896,10 +897,15 @@ db.enablePersistence({synchronizeTabs: true}).catch(err => {
   else if (err.code === 'unimplemented') console.warn('Firestore persistence: browser not supported');
 });
 const expensesRef = db.collection('expenses');
+const checksDoc = db.collection('checklist').doc('state');
 
 // In-memory cache of expenses (kept in sync by onSnapshot)
 let _expenses = [];
 let _firestoreReady = false;
+
+// In-memory cache of checkbox state (synced via Firestore)
+let _checks = {};
+let _checksReady = false;
 
 // Sync status tracking
 let _syncStatus = 'syncing'; // 'online' | 'offline' | 'syncing'
@@ -930,6 +936,40 @@ expensesRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true
   console.error('Firestore listener error:', err);
   setSyncStatus('offline');
 });
+
+// Real-time listener for checklist checkboxes
+checksDoc.onSnapshot({includeMetadataChanges: true}, snapshot => {
+  if (snapshot.exists) {
+    _checks = snapshot.data();
+  }
+  _checksReady = true;
+  // Cache in localStorage as fallback
+  try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
+  // Re-render checkboxes in the currently visible tab
+  refreshCheckboxUI();
+}, err => {
+  console.error('Checklist listener error:', err);
+  // Load from localStorage fallback
+  if (!_checksReady) {
+    try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
+    _checksReady = true;
+  }
+});
+
+function refreshCheckboxUI() {
+  // Re-render whichever panels are active to reflect remote changes
+  const activePanel = document.querySelector('.tab-panel.active');
+  if (!activePanel) return;
+  const id = activePanel.id;
+  if (id === 'panel-plan') renderPreviaje();
+  else if (id === 'panel-days') {
+    // Update checkboxes in-place without re-rendering the whole day view
+    activePanel.querySelectorAll('input[type="checkbox"][onchange*="toggleCheck"]').forEach(cb => {
+      const match = cb.getAttribute('onchange').match(/toggleCheck\('([^']+)'/);
+      if (match) cb.checked = !!_checks[match[1]];
+    });
+  }
+}
 
 // ===================== DATA =====================
 
@@ -1033,16 +1073,15 @@ const GF_RESTAURANTS = [
 const DAILY_EATS = [
   // ============ DÍA 1 ============
   {day:1,date:'Sáb 14 nov',loc:'Tokio',color:'#b197fc',
-   note:'Llegada NRT 18:10 — solo cena. Zona Kuramae / Asakusa.',
+   note:'Llegada NRT 18:10 — solo cena. Zona Shibuya / Nakameguro / Shimbashi.',
    seasonal:'🍂 Noviembre: inicio de oden callejero, yakiimo (boniato asado), nabe.',
    comida:null,
    cena:{spots:[
      {name:'Tachinomi Shimbashi Gado-shita',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Bajo las vías del tren en Shimbashi. Yakitori, cerveza de barril, oficinistas. El Japón real a 10 min de Ginza.',area:'Shimbashi',lat:35.6660,lng:139.7580,gfNote:'Yakitori shio (sal), edamame, sashimi si hay. Llevar tamari.'},
-     {name:'Kadokura',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Standing izakaya puro Showa en Ueno. Abre a las 15h y ya está lleno. Platos desde 300¥, cerveza 400¥.',area:'Ueno',lat:35.7098,lng:139.7750,gfNote:'Yakitori shio, edamame, tsukemono (encurtidos). Evitar tare.'},
-     {name:'Onigiri Asakusa Yadoroku',type:'Onigiri',price:'~400¥ (~2€)',desc:'La onigiriya más antigua de Tokio (1954). Onigiri artesanales hechos a mano. 15 variedades. Perfecto para primer bocado.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'🟢 Onigiri de arroz son GF por naturaleza. Elegir rellenos simples: sake (salmón), umeboshi (ciruela), kombu.'},
+     {name:'Ramen en Nakameguro/Shibuya',type:'Ramen',price:'~1.000¥ (~5€)',desc:'Decenas de opciones a 10 min a pie del hostel. Nakameguro tiene ramenya de barrio sin colas. Primer ramen del viaje.',area:'Nakameguro',lat:35.6442,lng:139.6988,gfNote:'❌ Ramen: fideos de trigo + caldo con soja. No apto. Ver opciones GF.'},
+     {name:'Izakayas en Dogenzaka/Shibuya',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'La zona del hostel está llena de izakayas baratas. No os compliquéis la primera noche — lo que pille.',area:'Shibuya',lat:35.6580,lng:139.6982,gfNote:'Pedir yakitori shio (sal), edamame, sashimi. Llevar tamari para soja.'},
    ],gf:[
-     {name:'Tempura Asakusa SAKURA',type:'100% GF',price:'~1.500¥ (~8€)',desc:'Tempura con rebozado de harina de arroz. Reserva obligatoria. A 5 min de Senso-ji.',area:'Asakusa',lat:35.7105,lng:139.7950},
-     {name:'Atomiyosowaka',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Café plant-based + GF en Kuramae. Perfecto si el hostel está en la zona.',area:'Kuramae',lat:35.7000,lng:139.7930},
+     {name:'Afuri (Harajuku/Shibuya)',type:'Ramen',price:'~1.100¥ (~6€)',desc:'Ramen yuzu-shio ligero. No es 100% GF pero tienen opciones de caldo sin trigo. Consultar en tienda.',area:'Shibuya/Harajuku',lat:35.6625,lng:139.7050},
    ]}},
 
   // ============ DÍA 2 ============
@@ -1065,7 +1104,7 @@ const DAILY_EATS = [
 
   // ============ DÍA 3 ============
   {day:3,date:'Lun 16 nov',loc:'Tokio',color:'#b197fc',
-   note:'Shimokitazawa → Sangenjaya → Nonbei Yokocho. Barrios indie + bares.',
+   note:'Shimokitazawa → Sangenjaya → Hamarikyu → ferry Sumida → Asakusa noche → Nonbei Yokocho.',
    seasonal:null,
    comida:{spots:[
      {name:'Shirube',type:'Curry',price:'~900¥ (~5€)',desc:'Curry japonés casero en local diminuto de Shimokitazawa. Especias propias, arroz perfecto. Cola a mediodía.',area:'Shimokitazawa',lat:35.6612,lng:139.6690,gfNote:'⚠️ Curry japonés lleva roux con harina de trigo. No apto.'},
@@ -1074,10 +1113,12 @@ const DAILY_EATS = [
      {name:'Natural Kitchen Inning Plus',type:'100% GF',price:'~1.200¥ (~7€)',desc:'TODO el menú sin gluten. Rating 5.0. Está EN Shimokitazawa — perfecto hoy.',area:'Shimokitazawa',lat:35.6612,lng:139.6680},
    ]},
    cena:{spots:[
-     {name:'Sankaku Chitai (Sangenjaya)',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Laberinto de callejones con bares de 4-6 asientos. Hashigo-zake (saltar de bar en bar). Yakitori a 150¥, cerveza a 300¥.',area:'Sangenjaya',lat:35.6437,lng:139.6710,gfNote:'Yakitori shio en cualquier puesto. Evitar salsas. Edamame seguro.'},
-     {name:"Shin-Hinomoto (Andy's)",type:'Izakaya',price:'~2.000¥ (~11€)',desc:'Izakaya mítica bajo las vías de Yurakucho. Sashimi fresco del mercado. 30 años regentada por un británico.',area:'Yurakucho',lat:35.6743,lng:139.7632,gfNote:'🟢 Sashimi fresco es la especialidad. Pedir sin soja o con tamari propio.'},
+     {name:'Hoppy Dōri (Asakusa)',type:'Izakaya al aire libre',price:'~800¥ (~4€)',desc:'Calle de izakayas junto a Sensō-ji. Mesas en la calle, yakitori, hoppy (cerveza barata). Ambiente obrero de posguerra. Llegáis aquí tras el ferry.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'Yakitori shio en cualquier puesto. Evitar salsas. Edamame seguro.'},
+     {name:'Onigiri Asakusa Yadoroku',type:'Onigiri',price:'~400¥ (~2€)',desc:'La onigiriya más antigua de Tokio (1954). Onigiri artesanales hechos a mano. 15 variedades. Cierra 17:00, pero si llegáis a tiempo del ferry, bocado rápido.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'🟢 Onigiri de arroz son GF por naturaleza. Elegir rellenos simples: sake (salmón), umeboshi (ciruela), kombu.'},
+     {name:'Kamiya Bar (1880)',type:'Bar histórico',price:'~1.000¥ (~5€)',desc:'Bar occidental más antiguo de Japón. Denki Bran (brandy eléctrico) a 45°. Edificio art-déco, barra de madera original.',area:'Asakusa',lat:35.7112,lng:139.7968,gfNote:'Bebidas seguras. Comida limitada — consultar.'},
    ],gf:[
-     {name:'Fleur de Sarrasin',type:'100% GF',price:'~1.800¥ (~10€)',desc:'Galettes de alforfón estilo francés. Muelen su propia harina de trigo sarraceno.',area:'Kuramae',lat:35.7120,lng:139.7970},
+     {name:'Tempura Asakusa SAKURA',type:'100% GF',price:'~1.500¥ (~8€)',desc:'Tempura con rebozado de harina de arroz. Reserva obligatoria. A 5 min de Senso-ji.',area:'Asakusa',lat:35.7105,lng:139.7950},
+     {name:'Fleur de Sarrasin',type:'100% GF',price:'~1.800¥ (~10€)',desc:'Galettes de alforfón estilo francés. Muelen su propia harina de trigo sarraceno. Cerca de Asakusa.',area:'Kuramae',lat:35.7120,lng:139.7970},
    ]}},
 
   // ============ DÍA 4 ============
@@ -1240,7 +1281,7 @@ const DAILY_EATS = [
 
   // ============ DÍA 14 ============
   {day:14,date:'Vie 27 nov',loc:'Osaka',color:'#ff6b6b',
-   note:'Día gastro completo + Osaka alternativa: Kizu Market → Shinsekai → Nakazakicho → Ura-Namba. Despedida.',
+   note:'Día gastro completo + Osaka alternativa: Kizu Market → Shinsekai → Amerikamura → Nakazakicho → Hanshin Umeda → Ura-Namba. Flujo sur→norte→sur.',
    seasonal:'🦀 Temporada de cangrejo (kani) y fugu. Oden callejero. Hangaku en depachika.',
    comida:{spots:[
      {name:'Kizu Market (sashimi de lonja)',type:'Mercado',price:'~800¥ (~4€)',desc:'Mercado mayorista de 300+ años. Sashimi a precio de lonja, fruta, marisco. Cero turistas — donde compran los cocineros.',area:'Daikokucho',lat:34.6590,lng:135.5010,gfNote:'🟢 Sashimi fresco sin soja es GF. Llevar tamari para mojar.'},
@@ -1273,22 +1314,23 @@ const DAILY_EATS = [
 const DAYS = [
   {num:1,date:'Sáb 14 nov',location:'Tokio',color:'#b197fc',tags:[{t:'primer impacto',c:'offbeat'},{t:'noche tokiota',c:'food'}],
    activities:[
-     {icon:'✈️',title:'Tarde: Llegada NRT 18:10',detail:'Narita Express al centro (~28€, 80 min). Check-in hostel zona Kuramae/Asakusa.'},
-     {icon:'🍜',title:'Noche: tachinomi en Shimbashi Gado-shita',detail:'Debajo de las vías del tren. Oficinistas con yakitori y cerveza de barril. ~800¥/persona.'},
-     {icon:'🌿',title:'⬆️ Upgrade: Hamarikyu + ferry al atardecer',detail:'Jardín Hamarikyu (~300¥): jardín de los shōgun Tokugawa con estanque de agua salada y casa de té sobre el agua (matcha + wagashi ~500¥). Desde el embarcadero del jardín, ferry por el río Sumida hasta Asakusa (~1.000¥, 35 min) — vistas del skyline de Tokio al atardecer. Llegas directamente a Asakusa para el paseo nocturno.'},
-     {icon:'🌙',title:'Noche: Paseo por Asakusa',detail:'Senso-ji iluminado sin multitudes. Nakamise-dori cerrada pero atmosférica de noche.'}
+     {icon:'✈️',title:'Noche: Llegada NRT 18:10',detail:'Narita Express a Shibuya (~28€, 80 min). Llegaréis ~20:30 al Wise Owl Hostels (Aobadai, Meguro). Check-in hasta las 23:00.'},
+     {icon:'🍜',title:'Noche: Primera cena — tachinomi en Shimbashi o cerca del hostel',detail:'Opción A: Shimbashi Gado-shita (10 min en tren) — debajo de las vías, oficinistas con yakitori y cerveza de barril, ~800¥/persona. Opción B: Nakameguro/Shibuya — izakayas y ramen a 10 min a pie del hostel. No os compliquéis, mañana empieza lo bueno.'},
    ]},
   {num:2,date:'Dom 15 nov',location:'Tokio',color:'#b197fc',tags:[{t:'vinilos + templos',c:'offbeat'},{t:'Shichi-Go-San',c:'seasonal'}],
    activities:[
      {icon:'⛩️',title:'Mañana: Yanaka + Nezu + Sendagi ("Yanesen")',detail:'El barrio que sobrevivió a WWII. Callejones, templos pequeños, gatos, artesanos. Yanaka Ginza para senbei. SCAI The Bathhouse: galería en un baño de 200 años. Hoy Shichi-Go-San — familias con niños en kimono.'},
      {icon:'🎵',title:'Tarde: Koenji — capital punk/vintage',detail:'15 min en Chuo Line. BASE (hardcore), Los Apson (techno), Uptown Record (psych/goth/synth). Ropa vintage a mansalva.'},
-     {icon:'🎶',title:'Noche: Meikyoku Kissa Lion (Shibuya)',detail:'Kissaten de escucha con 70+ años. Altavoces hechos a medida, ~10.000 discos. Silencio obligatorio.'}
+     {icon:'🎶',title:'Noche: Meikyoku Kissa Lion (Shibuya)',detail:'Kissaten de escucha con 70+ años. Altavoces hechos a medida, ~10.000 discos. Silencio obligatorio.'},
+     {icon:'🎭',title:'⬆️ Opción: Kabuki en el Kabukiza (sustituye Bunraku)',detail:'La temporada de Bunraku en Osaka no coincide con nuestras fechas, pero en noviembre el Kabukiza de Ginza tiene "Chūshingura" (los 47 ronin) — una de las obras más épicas del repertorio. Matinée 11:00 (~4h) o tarde 16:30 (~4h). Desde ¥5.000. Subtítulos inglés ¥1.500. Si elegís matinée, moved Yanesen a otro rato; si elegís tarde, sacrificáis Koenji. Estación: Higashi-Ginza.'}
    ]},
-  {num:3,date:'Lun 16 nov',location:'Tokio',color:'#b197fc',tags:[{t:'Tokio indie',c:'offbeat'},{t:'callejones de 4 asientos',c:'food'}],
+  {num:3,date:'Lun 16 nov',location:'Tokio',color:'#b197fc',tags:[{t:'Tokio indie',c:'offbeat'},{t:'ferry al atardecer',c:'classic'},{t:'callejones de 4 asientos',c:'food'}],
    activities:[
-     {icon:'🏯',title:'Mañana: Shimokitazawa',detail:'Hub indie. Flash Disc Ranch (vinilos a 100¥), Disc Shop Zero (dub/dnb), City Country City (electrónica + café). Vintage, teatros, cafés.'},
-     {icon:'🍺',title:'Tarde: Sangenjaya (Sankaku Chitai)',detail:'Laberinto de callejones con bares de 4-6 asientos. Hashigo-zake (saltar de bar en bar). Yakitori a 150¥, cerveza a 300¥. Torre Carrot: mirador gratuito planta 26. Más local y barato que Golden Gai.'},
-     {icon:'🍺',title:'Noche: Nonbei Yokocho (Shibuya)',detail:'Callejón de los borrachos. Farolillos de los años 40, encanto Showa. Fracción del turismo de Golden Gai.'}
+     {icon:'🏯',title:'Mañana-Mediodía: Shimokitazawa',detail:'Hub indie. Flash Disc Ranch (vinilos a 100¥), Disc Shop Zero (dub/dnb), City Country City (electrónica + café). Vintage, teatros, cafés. Las tiendas abren ~11:00-12:00.'},
+     {icon:'🍺',title:'Mediodía-Tarde: Sangenjaya (Sankaku Chitai)',detail:'Laberinto de callejones con bares de 4-6 asientos. Hashigo-zake (saltar de bar en bar). Yakitori a 150¥, cerveza a 300¥. Torre Carrot: mirador gratuito planta 26. Más local y barato que Golden Gai.'},
+     {icon:'🌿',title:'Tarde: Hamarikyu + ferry Sumida al atardecer',detail:'Tren a Shimbashi (10 min). Jardín Hamarikyu (~300¥): jardín de los shōgun Tokugawa con estanque de agua salada y casa de té sobre el agua (matcha + wagashi ~500¥). A las ~16:00, ferry por el río Sumida hasta Asakusa (~1.000¥, 35 min) — skyline de Tokio al atardecer. Llegas directamente a Asakusa.'},
+     {icon:'🌙',title:'Noche: Asakusa + Senso-ji iluminado',detail:'Senso-ji iluminado sin multitudes. Nakamise-dori cerrada pero atmosférica de noche. Cenáis algo rápido en la zona y metro de vuelta a Shibuya (~35 min).'},
+     {icon:'🍺',title:'Noche tardía: Nonbei Yokocho (Shibuya)',detail:'Si os queda energía. Callejón de los borrachos junto al hostel. Farolillos de los años 40, encanto Showa. Fracción del turismo de Golden Gai.'},
    ]},
   {num:4,date:'Mar 17 nov',location:'Tokio → Kawaguchiko (Fuji)',color:'#74c0fc',tags:[{t:'Fuji nevado + arces',c:'seasonal'},{t:'onsen con vistas',c:'classic'},{t:'pueblo del Fuji',c:'offbeat'}],
    highlight:'🗻 Día del Monte Fuji. Noviembre tiene ~63% de días despejados. Comprobad isfujivisible.com antes de salir.',
@@ -1335,13 +1377,12 @@ const DAYS = [
   {num:9,date:'Dom 22 nov',location:'Kyoto',color:'#f783ac',tags:[{t:'2.000 arces al alba',c:'seasonal'},{t:'Kyoto sin hordas',c:'offbeat'}],
    highlight:'Estáis en el pico absoluto del koyo en Kyoto (22-25 nov). Vamos a evitar las hordas.',
    activities:[
-     {icon:'🍂',title:'Mañana temprano: Tofuku-ji (6:30)',detail:'2.000 arces en un valle desde el puente Tsutenkyo. A las 6:30 casi vacío. 1.000¥.'},
-     {icon:'🌿',title:'Mañana: Gio-ji + Otagi Nenbutsu-ji',detail:'Gio-ji: jardín de musgo y arces. Otagi Nenbutsu-ji: 1.200 estatuas de Buda únicas entre hojas otoñales.'},
-     {icon:'🍵',title:'Media mañana: Ceremonia del té (elegir 1)',detail:'Opción A: Tea Ceremony Ju-An (templo Jotokuji, norte Kyoto) — la más económica, en templo real, zona de Daitoku-ji sin turistas. Opción B: Anko-an (junto a Daitoku-ji) — 70 min hands-on, tú preparas el matcha. Elegid una.'},
-     {icon:'🗡️',title:'Opción: Sanjūsangen-dō (1.001 Kannon)',detail:'120m de nave con 1.001 estatuas doradas de Kannon (s.XII-XIII). Cada una con 1.000 brazos y expresión única. 600¥. Junto a Tōfuku-ji, 45 min bastan. De las cosas más impactantes de Kyoto.'},
-     {icon:'⛩️',title:'Mediodía: Fushimi Inari Taisha',detail:'Miles de torii naranjas. Gratis, 24h. Subida completa 2-3h. Clásico que merece la pena.'},
-     {icon:'🍶',title:'Tarde: Fushimi sake district',detail:'~40 cervecerías de sake. Gekkeikan Museum (600¥, cata). Barco por el canal. Hiyaoroshi.'},
-     {icon:'✨',title:'Noche: Iluminación Eikando',detail:'Arces iluminados reflejados en estanques. 17:30-21:00, 700¥. La más bella de Kyoto.'},
+     {icon:'🍂',title:'Mañana temprano: Tofuku-ji (6:30)',detail:'2.000 arces en un valle desde el puente Tsutenkyo. A las 6:30 casi vacío. 1.000¥. Sureste de Kyoto.'},
+     {icon:'🗡️',title:'Mañana: Sanjūsangen-dō (1.001 Kannon)',detail:'A 10 min andando de Tōfuku-ji. 120m de nave con 1.001 estatuas doradas de Kannon (s.XII-XIII). Cada una con 1.000 brazos y expresión única. 600¥. 45 min bastan. De las cosas más impactantes de Kyoto.'},
+     {icon:'⛩️',title:'Mediodía: Fushimi Inari Taisha',detail:'Desde Tōfuku-ji, 1 parada de tren JR. Miles de torii naranjas. Gratis, 24h. Subida completa 2-3h. Clásico que merece la pena.'},
+     {icon:'🍶',title:'Tarde temprano: Fushimi sake district',detail:'Junto a Fushimi Inari. ~40 cervecerías de sake. Gekkeikan Museum (600¥, cata). Barco por el canal. Hiyaoroshi.'},
+     {icon:'🍵',title:'Tarde: Ceremonia del té en Higashiyama (elegir 1)',detail:'De camino de Fushimi a Eikando, parada en Gion/Higashiyama para la ceremonia. Opción A: Fukujuen (Shijo/Teramachi, downtown) — 30 min, tienda flagship de té, ~2.625¥/persona. Opción B: byFood Tea Ceremony (Gion, 5th floor) — 60 min, preparas tu matcha + dulces, ~4.000¥. Opción C: matcha + wagashi en Kodai-ji o cualquier templo de Higashiyama (~500-800¥, sin ceremonia formal pero auténtico). Reservad A o B online con antelación.'},
+     {icon:'✨',title:'Noche: Iluminación Eikando',detail:'A 15 min en bus desde Gion. Arces iluminados reflejados en estanques. 17:30-21:00, 700¥. La más bella de Kyoto.'},
    ]},
   {num:10,date:'Lun 23 nov',location:'Kyoto: Kurama → Kibune',color:'#69db7c',tags:[{t:'túnel de arces',c:'seasonal'},{t:'onsen entre montañas',c:'nature'}],
    highlight:'🎌 23 nov = festivo en Japón (勤労感謝の日). Kurama estará más animado — id temprano.',
@@ -1357,7 +1398,7 @@ const DAYS = [
      {icon:'🎋',title:'Mañana temprano: Bosque de bambú (7:00)',detail:'Id a las 7:00 — a las 9:00 es intransitable. El camino entre cañas de 20m de altura. 5-10 min sin gente temprano. Gratis.'},
      {icon:'🍁',title:'Mañana: Tenryu-ji + Jojakko-ji',detail:'Tenryu-ji: jardín zen Patrimonio UNESCO con arces reflejados en el estanque. 500¥. Jojakko-ji: templo escondido en la colina con escalinata de arces. Menos turistas, más espectacular.'},
      {icon:'🐒',title:'Mediodía: Togetsukyo + Monkey Park',detail:'Puente Togetsukyo con montañas de arces de fondo. Iwatayama Monkey Park: 120 macacos japoneses en libertad, panorámica de todo Kyoto desde arriba. 550¥.'},
-     {icon:'🍵',title:'Tarde: Saga-Toriimoto + Adashino Nenbutsu-ji',detail:'Calle preservada de casas de campo al norte de Arashiyama. Adashino Nenbutsu-ji: 8.000 estatuas de piedra entre arces. Casi nadie llega aquí. Matcha de despedida en algún café de la zona.'},
+     {icon:'🌿',title:'Tarde: Gio-ji + Saga-Toriimoto + templos escondidos',detail:'Gio-ji: jardín de musgo y arces, silencio total (300¥). Subid a Otagi Nenbutsu-ji: 1.200 estatuas de Buda únicas entre hojas (cada una con cara distinta, algunas riendo). Saga-Toriimoto: calle preservada de casas de campo. Adashino Nenbutsu-ji: 8.000 estatuas de piedra entre arces. Todo a pie, misma zona norte de Sagano. Casi nadie llega aquí.'},
      {icon:'🌙',title:'Noche: Despedida de Kyoto',detail:'Última noche en la antigua capital. Paseo por Gion al anochecer, cena de despedida en Pontocho o Kiyamachi. Mañana: Nara y luego Osaka.'},
    ]},
   {num:12,date:'Mié 25 nov',location:'Kyoto → Nara',color:'#f783ac',tags:[{t:'bici por Kyoto',c:'free'},{t:'capital antigua',c:'classic'},{t:'ciervos + kōyō',c:'nature'}],
@@ -1380,9 +1421,10 @@ const DAYS = [
   {num:14,date:'Vie 27 nov',location:'Osaka',color:'#ff6b6b',tags:[{t:'lonja a las 6 AM',c:'food'},{t:'Osaka underground',c:'offbeat'},{t:'despedida',c:'food'}],
    activities:[
      {icon:'🐟',title:'Mañana: Kizu Market (mercado mayorista)',detail:'Mercado local de 300+ años cerca de Daikokucho. Marisco fresco a precio de lonja, fruta, sashimi. Cero turistas — donde compran los cocineros de Osaka.'},
-     {icon:'🍢',title:'Mediodía: Shinsekai profundo',detail:'Janjan Yokocho, arcade retro de 180m. Kushikatsu a precio de risa. Regla: NUNCA doble-dipping. En noviembre: temporada de fugu y cangrejo. Bunraku Theatre a 10 min (marionetas UNESCO, desde ~1.500¥).'},
-     {icon:'☕',title:'Tarde: Nakazakicho + Amerikamura',detail:'Nakazakicho: enclave bohemio con cafés en casas de los años 40. Amerikamura: Time Bomb Records (punk), Rare Groove (jazz). Vintage, vinilos, graffiti.'},
-     {icon:'🍻',title:'Noche: Despedida — Dōtonbori + Ura-Namba',detail:'Último depachika en Hanshin Umeda — hack del hangaku (半額) a partir de las 20:00: sushi a mitad de precio. Ura-Namba: laberinto de izakayas de 4 taburetes, tachinomi, vino natural. Oden callejero, última cerveza. Sayōnara Osaka.'},
+     {icon:'🍢',title:'Mediodía: Shinsekai profundo',detail:'Janjan Yokocho, arcade retro de 180m. Kushikatsu a precio de risa. Regla: NUNCA doble-dipping. En noviembre: temporada de fugu y cangrejo.'},
+     {icon:'🎸',title:'Tarde temprano: Amerikamura',detail:'De camino al norte, parada en Amemura (zona Shinsaibashi). Time Bomb Records (punk), Rare Groove (jazz). Vintage, vinilos, graffiti.'},
+     {icon:'☕',title:'Tarde: Nakazakicho',detail:'Enclave bohemio junto a Umeda: cafés en casas de madera de los años 40, hiedra, librerías indie, tostadores de café. Quedaos por la zona — Hanshin Umeda está a 10 min andando.'},
+     {icon:'🍻',title:'Noche: Despedida — Hanshin Umeda → Ura-Namba',detail:'Hanshin Umeda depachika — hack del hangaku (半額) a partir de las 20:00: sushi a mitad de precio. Luego metro a Namba (10 min). Ura-Namba: laberinto de izakayas de 4 taburetes, tachinomi, vino natural. Oden callejero, última cerveza. Sayōnara Osaka.'},
    ]},
   {num:15,date:'Sáb 28 nov',location:'Osaka → ✈️ KIX',color:'#8b8d97',tags:[{t:'sayōnara',c:'classic'},{t:'arcade infinito',c:'offbeat'}],
    activities:[
@@ -1467,11 +1509,16 @@ const TIPS = [
 
 // ===================== DAY ALERTS =====================
 const DAY_ALERTS = {
-  1: ['🕐 Check-in Wise Owl: 16:00–23:00 · Recepción desde 13:00',
+  1: ['🕐 Check-in Wise Owl Shibuya: 16:00–23:00 · Self check-in fuera de horario recepción',
+      '✈️ Aterrizáis 18:10 NRT — con inmigración + NEX llegaréis a Shibuya ~20:30. Primera noche tranquila, no os compliquéis.',
       '📋 PRE-VIAJE: Comprar eSIM antes de salir (Ubigi/Airalo/Holafly, ~18€ 15 días)',
       '📋 PRE-VIAJE: Contratar seguro de viaje',
       '📋 PRE-VIAJE: Llevar tamari sin gluten (sachets San-J) desde casa',
       '📋 PRE-VIAJE: Cargar Suica/Pasmo en el móvil o comprar IC card en Narita'],
+  2: ['🎭 OPCIÓN: Kabuki en Kabukiza (Ginza) — "Chūshingura" (47 ronin). Matinée 11:00 o tarde 16:30, ~4h. Desde ¥5.000. Subtítulos inglés ¥1.500. Sustituye al Bunraku de Osaka (temporada no coincide). Entradas a la venta 14 oct en kabuki-bito.jp'],
+  3: ['🌿 Hamarikyu cierra 17:00 (última entrada 16:30) — id a las 15:00-15:30 para disfrutarlo con calma antes del ferry',
+      '⛴️ Ferry Sumida: último ferry ~16:30-17:00, consultad horarios (suijobus.co.jp). Al atardecer es espectacular.',
+      '🌙 Senso-ji abierto 24h (exterior). Iluminado de noche sin gente — vale la pena aunque sea lunes.'],
   4: ['🕐 Check-in GuestHouse Guu: 15:00–21:00',
       '🎟️ Higaeri onsen con vista al Fuji: algunos piden reserva previa en temporada alta — consultad el día antes'],
   5: ['🕐 Check-in tabi-shiro: 16:30–21:00',
@@ -1482,24 +1529,22 @@ const DAY_ALERTS = {
       '⚠️ Supermercado Magome cierra ~17:00',
       '🚐 Shuttle onsen: 19:00 (vuelta 21:00)'],
   8: ['🕐 Check-in Fujitaya BnB Kyoto: 16:00–19:00 · ⚠️ Avisad si llegáis tarde',
-      '🎟️ RESERVAR: Ceremonia del té para D9 (Ju-An en Jotokuji o Anko-an junto a Daitoku-ji) — reservad online antes, se llenan',
+      '🎟️ RESERVAR: Ceremonia del té D9 — Fukujuen (Shijo, ¥2.625) o byFood Gion (~¥4.000) — reservad online antes',
       '🎟️ RESERVAR: Entradas Eikando iluminación nocturna D9 — comprad online si hay venta anticipada (eikando.or.jp)'],
-  9: ['🍵 Ceremonia del té: ¿habéis reservado? Ju-An o Anko-an — si no, id sin reserva temprano (plazas limitadas)',
+  9: ['🍵 Ceremonia del té: ¿habéis reservado? Fukujuen (Shijo) o byFood (Gion) — plazas limitadas en noviembre, reservad online',
       '🎟️ Tofuku-ji 6:30 AM: en pico koyo puede haber cola incluso temprano — id lo antes posible',
       '✨ Eikando iluminación: 17:30–21:00 · Colas largas sin entrada anticipada — id a las 17:00'],
   10: ['🎌 FESTIVO: 勤労感謝の日 (Día del Trabajo) — templos y trenes más llenos de lo normal',
        '🎟️ Expo "El Cuento de Genji" — Kyoto National Museum (2.200¥): comprad entrada anticipada online (kyohaku.go.jp) — exposición irrepetible, colas enormes',
        '♨️ Kurama Onsen: puede llenarse en festivo — id temprano (abre 10:00)',
        '🎟️ Kiyomizu-dera iluminación nocturna: consultar si hay venta anticipada (kiyomizudera.or.jp)'],
-  11: ['🎋 Arashiyama: id al bambú a las 7:00 — a las 9:00 es intransitable',
-       '🎟️ RESERVAR: Si queréis Bunraku Theatre en Osaka D14 — comprad entradas ya (ntj.jac.go.jp) · Desde ~1.500¥'],
+  11: ['🎋 Arashiyama: id al bambú a las 7:00 — a las 9:00 es intransitable'],
   12: ['⚠️ SLOW HOUSE NARA: Check-in 16:00–20:00 · Estricto, llegad antes de las 20:00',
        '🧳 Consigna SLOW HOUSE: solo 10:00–13:00',
        '📋 Mañana último día Kyoto: devolved bicis Fujitaya antes de check-out'],
   13: ['🕐 Check-in PG Kuromon: 15:00–17:00 · ⚠️ Ventana de 2h — contactad día anterior',
        '📞 Front desk PG Kuromon: solo 10:00–17:00'],
-  14: ['📋 Comprad Kansai Area Pass si no lo tenéis (2 días, 4.800¥ — cubre trenes D14+D15 y Haruka Express a KIX)',
-       '🎟️ Bunraku Theatre Osaka: ¿tenéis entradas? Si no, taquilla el mismo día (arriesgado)'],
+  14: ['📋 Comprad Kansai Area Pass si no lo tenéis (2 días, 4.800¥ — cubre trenes D14+D15 y Haruka Express a KIX)'],
   15: ['✈️ Vuelo KIX 16:30 — salid de Osaka con margen: Haruka Express ~70 min al aeropuerto',
        '📋 Check-out PG Kuromon antes de las 10:00 · Consigna 10:00–16:00 si necesitáis',
        '📋 Compras de última hora: Tenjinbashisuji por la mañana (arcade 2.6 km)'],
@@ -2328,9 +2373,9 @@ const GUIDE_HOODS = [
   },
   {
     name: 'Hamarikyu → Ferry → Asakusa',
-    day: 'Día 1 — tarde/noche',
+    day: 'Día 3 — tarde/noche',
     paragraphs: [
-      '<strong>⬆️ Upgrade recomendado:</strong> en vez de ir directo a Asakusa, haced primero <strong>Hamarikyu Gardens</strong> (浜離宮, ~300¥). Es el jardín donde los shōgun Tokugawa cazaban patos con halcones — un oasis de 250.000 m² rodeado de rascacielos. El <strong>estanque de agua salada</strong> (único en Tokio: sube y baja con la marea real de la bahía) tiene una casa de té flotante donde tomas matcha + wagashi mirando el agua (~500¥). En noviembre, los pinos del <em>300-Year Pine</em> (plantado por el sexto shōgun Ienobu) contrastan con arces rojos.',
+      'Después de Shimokitazawa y Sangenjaya por la mañana, la tarde empieza en <strong>Hamarikyu Gardens</strong> (浜離宮, ~300¥). Es el jardín donde los shōgun Tokugawa cazaban patos con halcones — un oasis de 250.000 m² rodeado de rascacielos. El <strong>estanque de agua salada</strong> (único en Tokio: sube y baja con la marea real de la bahía) tiene una casa de té flotante donde tomas matcha + wagashi mirando el agua (~500¥). En noviembre, los pinos del <em>300-Year Pine</em> (plantado por el sexto shōgun Ienobu) contrastan con arces rojos.',
       'Desde el embarcadero dentro del jardín sale el <strong>Tokyo Cruise / Water Bus</strong> hasta Asakusa (~1.000¥, 35 min). El trayecto remonta el <strong>río Sumida</strong> pasando bajo 12 puentes — el skyline de Tokio al atardecer con la Tokyo Skytree iluminándose es de las mejores vistas del viaje. Es transporte real, no turistada: los osaqueños usan los water buses del Dōtonbori, los tokiotas usan el Sumida. Llegas directamente al embarcadero de Asakusa, a 5 minutos de Sensō-ji.',
       'El Asakusa de día es un infierno turístico. El de noche es otro mundo. <strong>Sensō-ji</strong> — fundado en el año 645, es el templo más antiguo de Tokio — se ilumina a partir de las 18:00 con luz dorada y los turistas desaparecen. El templo tiene una historia de destrucción y resurrección: incendios en el periodo Edo, el Gran Terremoto de Kantō (1923) y los bombardeos de 1945 lo arrasaron. La reconstrucción actual (1958) reproduce fielmente el original. Caminar bajo el <strong>Kaminarimon</strong> (la Puerta del Trueno, con su farola roja de 700 kg) y por la Nakamise-dōri vacía a las 21:00 es una de las experiencias más atmosféricas de Tokio. El recinto es accesible 24h.',
       '<strong>Hoppy Dōri</strong> es la calle de izakayas al aire libre junto al templo — originalmente la zona donde los trabajadores de posguerra bebían <strong>hoppy</strong>, una bebida con sabor a cerveza inventada en 1948. Era más barata que la cerveza real y se mezclaba con shōchū para subir la graduación. Hoy sigue siendo la bebida de la casa: mesas en la calle, humo de yakitori, ancianos bebiendo a las 7 de la tarde.',
@@ -2563,11 +2608,11 @@ const GUIDE_ROUTE = [
     facts:[{l:'Tōfuku-ji',v:'2.000 arces, ir a las 6:30'},{l:'Gio-ji',v:'Jardín de musgo + arces'},{l:'Otagi Nenbutsu-ji',v:'1.200 estatuas únicas'}],
     paras:[
       'Kioto fue capital de Japón durante <strong>más de mil años</strong> (794-1868), desde que el emperador Kanmu trasladó la corte desde Nara. La ciudad fue diseñada como una réplica de <strong>Chang\'an</strong> (la capital Tang china): cuadrícula perfecta, palacio al norte. Sobrevivió la guerra sin bombardeos — el secretario de guerra americano Henry Stimson, que había visitado Kioto en su luna de miel, la sacó de la lista de objetivos nucleares.',
-      'El <strong>pico absoluto del kōyō en Kioto</strong> suele caer entre el 22 y el 25 de noviembre — estáis en pleno centro de la ventana. La clave es madrugar. <strong>Tōfuku-ji</strong> a las 6:30 AM: 2.000 arces en un valle visto desde el puente Tsūtenkyō — casi vacío a esa hora, abarrotado a las 10:00. Después, <strong>Gio-ji</strong>: un jardín de musgo íntimo con arces cayendo sobre el verde — el silencio aquí es casi físico.',
-      '<strong>Otagi Nenbutsu-ji</strong> en Arashiyama: 1.200 estatuas de rakan (discípulos de Buda) talladas por artistas amateur — cada una única, muchas con expresiones cómicas o absurdas. Entre hojas otoñales, es surrealista y conmovedor. Pocos turistas suben hasta aquí. <strong>Kōmyō-ji</strong> (光明寺) es la alternativa secreta: un túnel de arces espectacular (<em>momiji no sanmon</em>) con una fracción de la gente de Tōfuku-ji.'
+      'El <strong>pico absoluto del kōyō en Kioto</strong> suele caer entre el 22 y el 25 de noviembre — estáis en pleno centro de la ventana. La clave es madrugar. <strong>Tōfuku-ji</strong> a las 6:30 AM: 2.000 arces en un valle visto desde el puente Tsūtenkyō — casi vacío a esa hora, abarrotado a las 10:00. <strong>Sanjūsangen-dō</strong> está a 10 min andando — 1.001 Kannon doradas en una nave de 120m, cada una única.',
+      'El día fluye por el corredor sureste-este de Kioto: de Tōfuku-ji bajáis a <strong>Fushimi Inari</strong> (1 parada de tren) y el <strong>distrito de sake de Fushimi</strong>, y luego subís a <strong>Gion/Higashiyama</strong> para la ceremonia del té y la iluminación de Eikando. Todo en línea, sin cruzar la ciudad. <strong>Kōmyō-ji</strong> (光明寺) es la alternativa secreta para otro día: un túnel de arces espectacular (<em>momiji no sanmon</em>) con una fracción de la gente de Tōfuku-ji.'
     ],
-    spots: ['Tōfuku-ji (6:30 AM)','Sanjūsangen-dō (1.001 Kannon)','Gio-ji','Otagi Nenbutsu-ji','Kōmyō-ji (alternativa)','Ceremonia del té (Ju-An o Anko-an)'],
-    tip: '🍂 Ir a Tōfuku-ji en taxi a las 6:15. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando de Tōfuku-ji — 120 metros de 1.001 Kannon doradas del s.XII-XIII, cada una con expresión única. 45 min bastan para absorberlo. Encaja perfecto entre Tōfuku-ji y la ceremonia del té. 🍵 <strong>Ceremonia del té</strong> a media mañana (elegir UNA): <strong>Tea Ceremony Ju-An</strong> (templo Jotokuji, zona Daitoku-ji — la más económica, en templo real, sin turistas) o <strong>Anko-an</strong> (junto a Daitoku-ji — 70 min hands-on, tú preparas el matcha). Ambas en el norte de Kioto, lejos de las hordas.',
+    spots: ['Tōfuku-ji (6:30 AM)','Sanjūsangen-dō (1.001 Kannon)','Fushimi Inari','Fushimi sake','Ceremonia del té (Higashiyama)','Eikando iluminación'],
+    tip: '🍂 Ir a Tōfuku-ji en taxi a las 6:15. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando — 45 min bastan. Luego 1 parada JR a Fushimi Inari, y distrito de sake al lado. 🍵 <strong>Ceremonia del té</strong> por la tarde: <strong>Fukujuen</strong> (Shijo, flagship store, 30 min, ~¥2.625) o <strong>byFood Gion</strong> (60 min, haces tu matcha, ~¥4.000). O simplemente matcha + wagashi en Kodai-ji (~¥500). Reservad online.',
     nov:'🍁 Pico kōyō en Kioto: semana del 22-25 nov. Reserva restaurantes con antelación. Mañanas ~5°C.'
   },
   {
@@ -2673,10 +2718,10 @@ const GUIDE_ROUTE = [
       'Ōsaka se entiende desde su historia como <strong>ciudad de mercaderes</strong> (<em>shōnin no machi</em>). Mientras Tokio era la capital del shōgun y Kioto la del emperador, Ōsaka era donde se hacía el dinero — los comerciantes inventaron el <strong>primer mercado de futuros del mundo</strong> (bolsa de arroz de Dōjima, 1697). Esto explica el carácter: directa, ruidosa, obsesionada con la comida. El dicho local es <strong>kuidaore</strong> (食い倒れ, "comer hasta arruinarse").',
       '<strong>Kizu Market</strong> (木津市場): mercado mayorista de más de 300 años cerca de Daikokucho. Marisco fresco, fruta, sashimi a precio de lonja — donde compran los cocineros de Ōsaka. El <strong>morning market</strong> (2º y último sábado del mes, 9:00-12:00) es especial, pero cualquier mañana entre semana vale. Cerrado domingos. <strong>La alternativa no turística a Kuromon</strong>, que se ha convertido en una trampa de brochetas de wagyu a ¥4.000.',
       '<strong>Shinsekai</strong> (新世界) se construyó en 1912 como un experimento utópico: la mitad norte imitaba París (con la torre Tsūtenkaku, réplica de la Eiffel) y la mitad sur imitaba Coney Island. La guerra lo devastó, la torre fue desmantelada para chatarra militar, y fue territorio yakuza durante décadas. Hoy conserva una <strong>energía cruda</strong> — neones chillones, kushikatsu humeante, ancianos jugando shōgi en la calle. <strong>Janjan Yokochō</strong> es la arcade retro de 180m: kushikatsu a ~100-150¥/brocheta. El <strong>kushikatsu</strong> nació aquí en los años 1920: regla sagrada <strong>"no doble dip"</strong> en la salsa comunal.',
-      'A 10 minutos de Shinsekai está el <strong>National Bunraku Theatre</strong> (国立文楽劇場) en Nipponbashi. El <strong>bunraku</strong> (文楽) es teatro de marionetas del siglo XVII — Patrimonio Inmaterial UNESCO — y <strong>nació en Ōsaka</strong>. Cada marioneta mide 1,20m y la manejan 3 titiriteros a la vista: el <em>omozukai</em> (maestro principal, sin capucha) controla cabeza y mano derecha, el segundo la mano izquierda, y el tercero los pies. A los 5 minutos los titiriteros desaparecen y solo ves a los personajes vivos. El <em>tayū</em> (narrador) hace todas las voces — hombre, mujer, niño, anciano — y el <em>shamisen</em> marca la emoción. Las obras maestras (<em>Sonezaki Shinjū</em>, de Chikamatsu Monzaemon, el "Shakespeare japonés") tratan de amantes que eligen morir juntos antes que vivir sin honor. Hay audioguía en inglés (~650¥). Desde ~1.500¥.'
+      'A 10 minutos de Shinsekai está el <strong>National Bunraku Theatre</strong> (国立文楽劇場) en Nipponbashi. El <strong>bunraku</strong> (文楽) es teatro de marionetas del siglo XVII — Patrimonio Inmaterial UNESCO — y <strong>nació en Ōsaka</strong>. Cada marioneta mide 1,20m y la manejan 3 titiriteros a la vista: el <em>omozukai</em> (maestro principal, sin capucha) controla cabeza y mano derecha, el segundo la mano izquierda, y el tercero los pies. A los 5 minutos los titiriteros desaparecen y solo ves a los personajes vivos. El <em>tayū</em> (narrador) hace todas las voces — hombre, mujer, niño, anciano — y el <em>shamisen</em> marca la emoción. Las obras maestras (<em>Sonezaki Shinjū</em>, de Chikamatsu Monzaemon, el "Shakespeare japonés") tratan de amantes que eligen morir juntos antes que vivir sin honor. ⚠️ <strong>La temporada de noviembre 2026 termina el 23 — no coincide con nuestros días en Osaka (26-28 nov).</strong> Como alternativa, hemos añadido Kabuki en el Kabukiza de Tokyo (D2).'
     ],
-    spots: ['Kizu Market','Shinsekai','Tsūtenkaku','Kushikatsu (no doble dip)','Janjan Yokochō','National Bunraku Theatre'],
-    tip: '🐟 Kizu Market: estación Daikokucho (metro). Llega antes de las 10:00 para lo mejor. Después, Shinsekai está a 10 min andando. 🎭 El National Bunraku Theatre está en Nipponbashi, a 10 min de Shinsekai — confirma calendario de noviembre. Funciones 11:00 o 16:00, audioguía inglés ~650¥.',
+    spots: ['Kizu Market','Shinsekai','Tsūtenkaku','Kushikatsu (no doble dip)','Janjan Yokochō'],
+    tip: '🐟 Kizu Market: estación Daikokucho (metro). Llega antes de las 10:00 para lo mejor. Después, Shinsekai está a 10 min andando.',
     nov:'🦀 En noviembre: empieza la temporada de fugu y cangrejo. Set de fugu desde ~3.000¥ en Shinsekai — busca la bandera con pez globo.'
   },
   {
@@ -2834,18 +2879,18 @@ function renderGuide() {
 // ===================== PRE-VIAJE =====================
 const PREVIAJE = [
   {section:'🔴 Reservar YA (con antelación)', urgency:'ya', items:[
-    {id:'pv-tea', text:'Ceremonia del té en Kyoto (D9)',
-     detail:'Ju-An en Jotokuji Temple o Anko-an junto a Daitoku-ji. Grupos reducidos, se llenan semanas antes en temporada koyo. ~3.000¥/pp.',
-     links:[{label:'Reservar Ju-An',url:'https://teaceremonykyoto.com/'},{label:'GetYourGuide',url:'https://www.getyourguide.com/kyoto-l96826/kyoto-tea-ceremony-ju-an-at-jotokuji-temple-t186627/'}]},
-    {id:'pv-eikando', text:'Entradas Eikando iluminación nocturna (D9)',
-     detail:'17:30–21:00, 700¥. La más bella de Kyoto. Si hay venta anticipada online, comprad ya — sin entrada las colas son de 1h+.',
+    {id:'pv-tea', text:'Ceremonia del té en Kyoto',
+     day:'D9 · 22 nov', detail:'Opción A: Fukujuen (Shijo/Teramachi, downtown Kyoto) — 30 min, flagship store de té, ~¥2.625/persona (mín. 2). Opción B: byFood Tea Ceremony (Gion) — 60 min, preparas tu matcha + dulces, ~¥4.000. Opción C: simplemente matcha + wagashi en Kodai-ji u otro templo de Higashiyama (~¥500-800, sin ceremonia formal). Reservad A o B online — en noviembre se llenan rápido.',
+     links:[{label:'Fukujuen Kyoto',url:'https://experience.fukujuen.com/'},{label:'byFood Gion',url:'https://www.byfood.com/experiences/kyoto-traditional-tea-ceremony-with-matcha-and-sweets-43475'}]},
+    {id:'pv-eikando', text:'Entradas Eikando iluminación nocturna',
+     day:'D9 · 22 nov', detail:'17:30–21:00, 700¥. La más bella de Kyoto. Si hay venta anticipada online, comprad ya — sin entrada las colas son de 1h+.',
      links:[{label:'eikando.or.jp',url:'https://www.eikando.or.jp/English/osirase_e.html'},{label:'Info horarios',url:'https://glostravel.com/en/article/eikando-autumn-leaves'}]},
-    {id:'pv-genji', text:'Expo "El Cuento de Genji" — Kyoto National Museum (D10)',
-     detail:'Reunión de tesoros cada ~50 años. Hasta 29 nov 2026. 2.200¥. Colas enormes sin entrada anticipada.',
+    {id:'pv-genji', text:'Expo "El Cuento de Genji" — Kyoto National Museum',
+     day:'D10 · 23 nov', detail:'Reunión de tesoros cada ~50 años. Hasta 29 nov 2026. 2.200¥. Colas enormes sin entrada anticipada.',
      links:[{label:'Entradas online',url:'https://www.kyohaku.go.jp/eng/exhibitions/special/2026_genji/'},{label:'Kyoto Nat. Museum',url:'https://www.kyohaku.go.jp/eng/'}]},
-    {id:'pv-bunraku', text:'Bunraku Theatre en Osaka (D14)',
-     detail:'Teatro de marionetas tradicional — Patrimonio UNESCO. National Bunraku Theatre en Osaka. Desde ~1.500¥.',
-     links:[{label:'Comprar entradas',url:'https://www.ntj.jac.go.jp/en/your_visit/tickets/'},{label:'Programación',url:'https://www.ntj.jac.go.jp/en/bunraku/'}]},
+    {id:'pv-bunraku', text:'Kabuki en Kabukiza, Ginza (sustituye Bunraku Osaka)',
+     day:'D2 · 15 nov', detail:'La temporada de Bunraku en Osaka no coincide con nuestras fechas. Alternativa: Kabuki en Ginza — "Chūshingura" (47 ronin), 1-25 nov. Matinée 11:00 o tarde 16:30. Desde ¥5.000. Subtítulos inglés ¥1.500 extra. Entradas a la venta 14 oct.',
+     links:[{label:'Programa nov 2026',url:'https://www.kabukiweb.net/theatres/kabukiza/kabukiza_november_2026/'},{label:'Comprar entradas',url:'https://www.kabukiweb.net/'}]},
   ]},
   {section:'🟠 Comprar antes de salir', urgency:'pronto', items:[
     {id:'pv-esim', text:'eSIM de datos (15 días)',
@@ -2856,7 +2901,7 @@ const PREVIAJE = [
      links:[{label:'Heymondo',url:'https://www.heymondo.com/'},{label:'IATI Seguros',url:'https://www.iatiseguros.com/'}]},
     {id:'pv-tamari', text:'Tamari sin gluten — sachets San-J',
      detail:'La soja japonesa (shōyu) SIEMPRE tiene trigo. Llevar sachets individuales de tamari GF desde casa. Indispensable para cenar fuera.',
-     links:[{label:'San-J Tamari',url:'https://san-j.com/products/organic-tamari-travel-packs/'}]},
+     links:[{label:'San-J Tamari',url:'https://san-j.com/product/organic-gluten-free-tamari-travel-packs/'}]},
     {id:'pv-suica', text:'Configurar Suica/Pasmo en Apple Wallet',
      detail:'Abrid Apple Wallet → + → Tarjeta de transporte → Suica. Cargad ¥2.000-3.000 al llegar. Funciona en metro, trenes, konbinis y máquinas.',
      links:[{label:'Guía Apple',url:'https://support.apple.com/en-us/108772'},{label:'Setup completo',url:'https://japanauthentic.com/blog/how-to-use-suica-on-iphone-2026'}]},
@@ -2866,16 +2911,22 @@ const PREVIAJE = [
   ]},
   {section:'🟡 Semana antes del viaje', urgency:'semana', items:[
     {id:'pv-kansai', text:'Comprar Kansai Area Pass online (2 días)',
-     detail:'4.800¥ (~26€). Cubre Kyoto–Osaka–Nara–Kobe y Haruka Express a KIX. Más barato comprando online que en taquilla.',
-     links:[{label:'Comprar JR West',url:'https://www.westjr.co.jp/travel-information/en/tickets-passes/jrwest-rail-pass/kansai/'},{label:'WEST QR Pass',url:'https://www.westjr.co.jp/global/en/ticket/westqr/kansaiarea/'}]},
-    {id:'pv-kiyomizu', text:'Consultar entradas Kiyomizu-dera iluminación (D10)',
-     detail:'21–30 nov, 17:30–21:30, 400¥. Comprobar si hay venta anticipada — si no, ir a las 17:00 para evitar cola.',
+     day:'D12–15 · 25–28 nov', detail:'4.800¥ (~26€). Cubre Kyoto–Osaka–Nara–Kobe y Haruka Express a KIX. Más barato comprando online que en taquilla.',
+     links:[{label:'Comprar JR West',url:'https://www.westjr.co.jp/global/en/ticket/pass/kansai/'},{label:'WEST QR Pass',url:'https://www.westjr.co.jp/global/en/ticket/westqr/kansaiarea/'}]},
+    {id:'pv-kiyomizu', text:'Consultar entradas Kiyomizu-dera iluminación',
+     day:'D10 · 23 nov', detail:'21–30 nov, 17:30–21:30, 400¥. Comprobar si hay venta anticipada — si no, ir a las 17:00 para evitar cola.',
      links:[{label:'kiyomizudera.or.jp',url:'https://www.kiyomizudera.or.jp/en/'},{label:'Info 2026',url:'https://glostravel.com/en/article/kiyomizu-dera-autumn-leaves'}]},
-    {id:'pv-tofukuji', text:'Consultar Tofuku-ji entrada cronometrada (D9)',
-     detail:'En pico koyo puede haber sistema de entrada por franjas. Abren desde 6:30 — cuanto antes mejor. 1.000¥.',
+    {id:'pv-tofukuji', text:'Consultar Tofuku-ji entrada cronometrada',
+     day:'D9 · 22 nov', detail:'En pico koyo puede haber sistema de entrada por franjas. Abren desde 6:30 — cuanto antes mejor. 1.000¥.',
      links:[{label:'Info Tofuku-ji',url:'https://selfguidejapan.com/blog/tofukuji-autumn-leaves-2026'}]},
+    {id:'pv-ferry', text:'Consultar horarios ferry Sumida (Hamarikyu → Asakusa)',
+     day:'D3 · 16 nov', detail:'Ferry Tokyo Cruise / Suijobus desde embarcadero Hamarikyu hasta Asakusa (~35 min, ~1.000¥). Último ferry ~16:30-17:00. Id a Hamarikyu a las 15:00 para disfrutar el jardín y coger ferry al atardecer.',
+     links:[{label:'Tokyo Cruise',url:'https://www.suijobus.co.jp/en/'},{label:'Hamarikyu Gardens',url:'https://www.tokyo-park.or.jp/park/hama-rikyu/index.html'}]},
+    {id:'pv-d12-maletas', text:'Plan maletas D12: Kyoto → Nara (bici + tren)',
+     day:'D12 · 25 nov', detail:'Dejad mochilas en consigna de Fujitaya BnB → ruta en bici por la mañana (7:00-9:30) → volved a Fujitaya → recoged mochilas y devolved bicis → check-out 10:00 → tren a Nara. Alternativa: consigna de Kyoto Station (¥400-700) si preferís no volver a Fujitaya.',
+     links:[]},
     {id:'pv-restaurantes', text:'Reservar restaurantes GF de Kyoto',
-     detail:'Los restaurantes buenos de Kyoto tienen 6-10 asientos y se llenan. Reservad Mumokuteki, Kerala, Ain Soph si podéis.',
+     day:'D8–12 · 21–25 nov', detail:'Los restaurantes buenos de Kyoto tienen 6-10 asientos y se llenan. Reservad Mumokuteki, Kerala, Ain Soph si podéis.',
      links:[]},
     {id:'pv-maps', text:'Guardar todos los restaurantes y spots en Google Maps',
      detail:'Crear listas "GF Restaurants", "Alojamiento", "Must-see" en Google Maps. Funciona offline con el mapa de Japón descargado.',
@@ -2884,15 +2935,15 @@ const PREVIAJE = [
      detail:'Google Maps → perfil → Mapas sin conexión → seleccionar zona de Kanto + Kansai. Imprescindible en zonas rurales (Kiso Valley).',
      links:[]},
     {id:'pv-efectivo', text:'Sacar efectivo / preparar tarjeta sin comisiones',
-     detail:'Japón rural (Kiso Valley, Narai, Magome) es cash-only. Llevar ~¥30.000 en efectivo o sacar en 7-Eleven ATM al llegar.',
+     day:'D6–7 · Kiso Valley', detail:'Japón rural (Kiso Valley, Narai, Magome) es cash-only. Llevar ~¥30.000 en efectivo o sacar en 7-Eleven ATM al llegar.',
      links:[]},
   ]},
   {section:'⚪ Opcional / nice-to-have', urgency:'opcional', items:[
-    {id:'pv-onsen', text:'Consultar higaeri onsen Kawaguchiko (D4)',
-     detail:'Onsen con vista al Fuji. Algunos piden reserva en temporada alta — consultar el día antes o a la llegada.',
+    {id:'pv-onsen', text:'Consultar higaeri onsen Kawaguchiko',
+     day:'D4 · 17 nov', detail:'Onsen con vista al Fuji. Algunos piden reserva en temporada alta — consultar el día antes o a la llegada.',
      links:[]},
-    {id:'pv-sumo', text:'Entrenamientos matutinos de sumo en Ryōgoku (D1-3)',
-     detail:'El torneo de noviembre es en Fukuoka, pero se puede ver entrenamiento matutino (asageiko) en establos de Ryōgoku. Reservar con antelación.',
+    {id:'pv-sumo', text:'Entrenamientos matutinos de sumo en Ryōgoku',
+     day:'D1–3 · 14–16 nov', detail:'El torneo de noviembre es en Fukuoka, pero se puede ver entrenamiento matutino (asageiko) en establos de Ryōgoku. Reservar con antelación.',
      links:[]},
     {id:'pv-snacks', text:'Snacks de emergencia GF para el avión/tren',
      detail:'Barritas, frutos secos, galletas GF. Para trayectos largos (avión, Shinkansen) donde no hay opciones seguras.',
@@ -2927,6 +2978,7 @@ function renderPreviaje() {
       const linksHtml = item.links.length > 0
         ? `<div class="pv-links">${item.links.map(l => `<a class="pv-link" href="${l.url}" target="_blank" rel="noopener">🔗 ${l.label}</a>`).join('')}</div>`
         : '';
+      const dayBadge = item.day ? `<span class="pv-day-badge">${item.day}</span>` : '';
       html += `
         <div class="pv-item${checked ? ' checked' : ''}">
           <label class="pv-check">
@@ -2934,7 +2986,7 @@ function renderPreviaje() {
             <span class="check-mark"></span>
           </label>
           <div class="pv-body">
-            <div class="pv-text">${item.text}</div>
+            <div class="pv-text">${item.text}${dayBadge}</div>
             <div class="pv-detail">${item.detail}</div>
             ${linksHtml}
           </div>
@@ -2974,10 +3026,25 @@ function updateTripClock() {
 
 // ===================== CHECKLIST =====================
 function isChecked(key) {
-  try { return localStorage.getItem('jp-check-' + key) === '1'; } catch(e) { return false; }
+  if (_checksReady) return !!_checks[key];
+  // Fallback while Firestore loads
+  try {
+    const cached = JSON.parse(localStorage.getItem('jp-checks') || '{}');
+    return !!cached[key];
+  } catch(e) {
+    // Legacy fallback: read old per-key format
+    try { return localStorage.getItem('jp-check-' + key) === '1'; } catch(e2) { return false; }
+  }
 }
 function toggleCheck(key, val) {
-  try { localStorage.setItem('jp-check-' + key, val ? '1' : '0'); } catch(e) {}
+  // Optimistic update in memory
+  _checks[key] = val;
+  // Write to Firestore (syncs to all devices)
+  checksDoc.set({[key]: val}, {merge: true}).catch(err => {
+    console.error('Error syncing checkbox:', err);
+  });
+  // Also cache locally as backup
+  try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
 }
 
 // ===================== COPY UTIL =====================
