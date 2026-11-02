@@ -691,6 +691,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 </style>
 <!-- Firebase SDK (compat for simple global usage) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
@@ -881,29 +882,32 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 <script>
 // ===================== FIREBASE =====================
-const firebaseConfig = {
-  apiKey: "AIzaSyCOIP_cv0orkaLTzC_W2zyRHePMLYIcB5M",
-  authDomain: "japan-trip-7ef65.firebaseapp.com",
-  projectId: "japan-trip-7ef65",
-  storageBucket: "japan-trip-7ef65.firebasestorage.app",
-  messagingSenderId: "1078999471635",
-  appId: "1:1078999471635:web:6269f9b472be6f5de1d1e6"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-// Enable offline persistence — data survives no-connection
-db.enablePersistence({synchronizeTabs: true}).catch(err => {
-  if (err.code === 'failed-precondition') console.warn('Firestore persistence: multiple tabs open');
-  else if (err.code === 'unimplemented') console.warn('Firestore persistence: browser not supported');
-});
-const expensesRef = db.collection('expenses');
-const checksDoc = db.collection('checklist').doc('state');
+let db, expensesRef, checksDoc;
+try {
+  if (typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded');
+  const firebaseConfig = {
+    apiKey: "AIzaSyCOIP_cv0orkaLTzC_W2zyRHePMLYIcB5M",
+    authDomain: "japan-trip-7ef65.firebaseapp.com",
+    projectId: "japan-trip-7ef65",
+    storageBucket: "japan-trip-7ef65.firebasestorage.app",
+    messagingSenderId: "1078999471635",
+    appId: "1:1078999471635:web:6269f9b472be6f5de1d1e6"
+  };
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  db.enablePersistence({synchronizeTabs: true}).catch(err => {
+    if (err.code === 'failed-precondition') console.warn('Firestore persistence: multiple tabs open');
+    else if (err.code === 'unimplemented') console.warn('Firestore persistence: browser not supported');
+  });
+  expensesRef = db.collection('expenses');
+  checksDoc = db.collection('checklist').doc('state');
+} catch(e) {
+  console.warn('Firebase no disponible, usando modo offline:', e.message);
+}
 
-// In-memory cache of expenses (kept in sync by onSnapshot)
+// In-memory caches
 let _expenses = [];
 let _firestoreReady = false;
-
-// In-memory cache of checkbox state (synced via Firestore)
 let _checks = {};
 let _checksReady = false;
 
@@ -918,57 +922,64 @@ function setSyncStatus(status) {
   el.innerHTML = '<span class="sync-dot"></span>' + labels[status];
 }
 
-// Real-time listener — fires on local + remote changes
-expensesRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true}, snapshot => {
-  _expenses = snapshot.docs.map(doc => ({_docId: doc.id, ...doc.data()}));
-  _firestoreReady = true;
-  // Detect if data came from server or local cache
-  const fromCache = snapshot.metadata.fromCache;
-  const hasPending = snapshot.metadata.hasPendingWrites;
-  if (hasPending) setSyncStatus('syncing');
-  else if (fromCache) setSyncStatus('offline');
-  else setSyncStatus('online');
-  // Also keep localStorage as a backup cache
-  try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
-  // Re-render UI
-  renderExpenses();
-}, err => {
-  console.error('Firestore listener error:', err);
-  setSyncStatus('offline');
-});
-
-// Real-time listener for checklist checkboxes
-checksDoc.onSnapshot({includeMetadataChanges: true}, snapshot => {
-  if (snapshot.exists) {
-    _checks = snapshot.data();
-  }
-  _checksReady = true;
-  // Cache in localStorage as fallback
-  try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
-  // Re-render checkboxes in the currently visible tab
-  refreshCheckboxUI();
-}, err => {
-  console.error('Checklist listener error:', err);
-  // Load from localStorage fallback
-  if (!_checksReady) {
-    try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
-    _checksReady = true;
-  }
-});
-
+// Re-render checkboxes when remote changes arrive
 function refreshCheckboxUI() {
-  // Re-render whichever panels are active to reflect remote changes
   const activePanel = document.querySelector('.tab-panel.active');
   if (!activePanel) return;
   const id = activePanel.id;
   if (id === 'panel-plan') renderPreviaje();
   else if (id === 'panel-days') {
-    // Update checkboxes in-place without re-rendering the whole day view
     activePanel.querySelectorAll('input[type="checkbox"][onchange*="toggleCheck"]').forEach(cb => {
       const match = cb.getAttribute('onchange').match(/toggleCheck\('([^']+)'/);
       if (match) cb.checked = !!_checks[match[1]];
     });
   }
+}
+
+// Anonymous auth — then start Firestore listeners
+if (typeof firebase !== 'undefined' && db) {
+  firebase.auth().signInAnonymously().catch(err => console.error('Auth error:', err));
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return;
+
+    // Expenses listener
+    expensesRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true}, snapshot => {
+      _expenses = snapshot.docs.map(doc => ({_docId: doc.id, ...doc.data()}));
+      _firestoreReady = true;
+      const fromCache = snapshot.metadata.fromCache;
+      const hasPending = snapshot.metadata.hasPendingWrites;
+      if (hasPending) setSyncStatus('syncing');
+      else if (fromCache) setSyncStatus('offline');
+      else setSyncStatus('online');
+      try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+      renderExpenses();
+    }, err => {
+      console.error('Firestore listener error:', err);
+      setSyncStatus('offline');
+    });
+
+    // Checklist checkbox listener
+    checksDoc.onSnapshot({includeMetadataChanges: true}, snapshot => {
+      if (snapshot.exists) _checks = snapshot.data();
+      _checksReady = true;
+      try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
+      refreshCheckboxUI();
+    }, err => {
+      console.error('Checklist listener error:', err);
+      if (!_checksReady) {
+        try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
+        _checksReady = true;
+      }
+    });
+  });
+} else {
+  // Fallback: load from localStorage
+  console.warn('Firebase no disponible — modo offline');
+  try { _expenses = JSON.parse(localStorage.getItem('jp-expenses') || '[]'); } catch(e) { _expenses = []; }
+  _firestoreReady = true;
+  try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
+  _checksReady = true;
+  setSyncStatus('offline');
 }
 
 // ===================== DATA =====================
@@ -986,6 +997,7 @@ const CITIES = {
 };
 
 const AIRPORTS = {
+  pvg: {name:'Pudong (PVG)',lat:31.1443,lng:121.8083,type:'transit'},
   nrt: {name:'Narita (NRT)',lat:35.7647,lng:140.3864,type:'arrival'},
   kix: {name:'Kansai (KIX)',lat:34.4320,lng:135.2304,type:'departure'}
 };
@@ -1071,8 +1083,20 @@ const GF_RESTAURANTS = [
 ];
 
 const DAILY_EATS = [
+  // ============ DÍA 0 — ESCALA SHANGHAI ============
+  {day:0,date:'Sáb 14 nov (mañana)',loc:'Shanghái',color:'#66d9e8',
+   note:'Escala 8h en Pudong. ~4h para ver la ciudad. Desayuno/brunch rápido.',
+   seasonal:'🥟 Noviembre: temporada de cangrejo peludo (大闸蟹 dàzháxiè) — manjar de otoño en Shanghai.',
+   comida:{spots:[
+     {name:'Nanxiang Steamed Bun Restaurant (Yu Garden)',type:'Street food',price:'~25¥ (~3€)',desc:'Xiaolongbao originales desde 1900. La casa matriz está en Yu Garden. Cola siempre, pero vale la pena. Planta baja = para llevar, rápido.',area:'Yu Garden',lat:31.2277,lng:121.4926,gfNote:'❌ Xiaolongbao: masa de trigo. No apto.'},
+     {name:'Puesto callejero en City God Temple',type:'Street food',price:'~15-30¥ (~2-4€)',desc:'Zona alrededor de Yu Garden llena de puestos: shēngjiān (dumpling frito), cōngyóubǐng (tortita de cebolleta), tánghúlu (frutas caramelizadas).',area:'Yu Garden',lat:31.2285,lng:121.4920,gfNote:'⚠️ La mayoría lleva trigo. Buscar tanghulu (fruta) o batata asada.'},
+   ],gf:[
+     {name:'Fruta / batata asada callejera',type:'Alternativa GF',price:'~10¥ (~1€)',desc:'Puestos de batata asada (烤红薯) por toda la zona. 100% GF y delicioso en noviembre.',area:'Yu Garden / Bund',lat:31.2300,lng:121.4900},
+   ]},
+   cena:null},
+
   // ============ DÍA 1 ============
-  {day:1,date:'Sáb 14 nov',loc:'Tokio',color:'#b197fc',
+  {day:1,date:'Sáb 14 nov (noche)',loc:'Tokio',color:'#b197fc',
    note:'Llegada NRT 18:10 — solo cena. Zona Shibuya / Nakameguro / Shimbashi.',
    seasonal:'🍂 Noviembre: inicio de oden callejero, yakiimo (boniato asado), nabe.',
    comida:null,
@@ -1312,7 +1336,16 @@ const DAILY_EATS = [
 ];
 
 const DAYS = [
-  {num:1,date:'Sáb 14 nov',location:'Tokio',color:'#b197fc',tags:[{t:'primer impacto',c:'offbeat'},{t:'noche tokiota',c:'food'}],
+  {num:0,date:'Sáb 14 nov (mañana)',location:'✈️ Escala Shanghái',color:'#66d9e8',tags:[{t:'escala 8h',c:'classic'},{t:'xiaolongbao',c:'food'}],
+   highlight:'🇨🇳 8h de escala en Pudong — tiempo justo para ver lo esencial. Pasaporte español = tránsito sin visado 240h. Maglev del aeropuerto al centro en 8 min.',
+   activities:[
+     {icon:'🛬',title:'Mañana: Llegada a Pudong (PVG)',detail:'Aterrizáis temprano. Pasaporte español: tránsito sin visado (política 240h). Pasad inmigración, dejad mochilas en consigna del aeropuerto (~¥40-60) y coged el Maglev (磁浮列车) a Longyang Rd — 8 min, 431 km/h, ~¥50/pp. De Longyang Rd, metro L10 hasta Yu Garden (~20 min). Total aeropuerto → centro: ~40 min.'},
+     {icon:'🏯',title:'Mañana: Yu Garden (豫园) + City God Temple',detail:'Jardín clásico del s. XVI con pabellones, estanques y rocas Taihu. Entrada ~¥40. La zona exterior (City God Temple Bazaar) es gratis y tiene puestos de xiaolongbao, shēngjiān y snacks. Desayunad aquí: los xiaolongbao de Nanxiang (desde 1900) son obligatorios.'},
+     {icon:'🌆',title:'Mediodía: The Bund (外滩) — skyline de Pudong',detail:'15 min andando desde Yu Garden. El paseo marítimo más icónico de Asia: edificios coloniales art-déco a un lado, los rascacielos de Lujiazui al otro (Shanghai Tower 632m, Oriental Pearl, Jin Mao). Recorred el malecón de sur a norte (~2 km). Fotos brutales de día.'},
+     {icon:'🛍️',title:'Mediodía: Nanjing Road (南京路步行街)',detail:'Desde el extremo norte del Bund, giráis hacia Nanjing East Road — la calle peatonal comercial más famosa de China (~1.4 km). Ambiente, neones, tiendas. No hace falta recorrerla entera — id hasta People\'s Square y volved. Si os sobra tiempo: paseo por la Concesión Francesa (metro L1 a South Shaanxi Rd).'},
+     {icon:'🚄',title:'Regreso: Maglev a Pudong',detail:'⚠️ Volved al aeropuerto mínimo 3h antes de vuestro vuelo a Narita. Metro a Longyang Rd + Maglev (último ~21:30). Facturad y a embarcar — siguiente parada: Tokio.'},
+   ]},
+  {num:1,date:'Sáb 14 nov (noche)',location:'Tokio',color:'#b197fc',tags:[{t:'primer impacto',c:'offbeat'},{t:'noche tokiota',c:'food'}],
    activities:[
      {icon:'✈️',title:'Noche: Llegada NRT 18:10',detail:'Narita Express a Shibuya (~28€, 80 min). Llegaréis ~20:30 al Wise Owl Hostels (Aobadai, Meguro). Check-in hasta las 23:00.'},
      {icon:'🍜',title:'Noche: Primera cena — tachinomi en Shimbashi o cerca del hostel',detail:'Opción A: Shimbashi Gado-shita (10 min en tren) — debajo de las vías, oficinistas con yakitori y cerveza de barril, ~800¥/persona. Opción B: Nakameguro/Shibuya — izakayas y ramen a 10 min a pie del hostel. No os compliquéis, mañana empieza lo bueno.'},
@@ -1429,7 +1462,7 @@ const DAYS = [
   {num:15,date:'Sáb 28 nov',location:'Osaka → ✈️ KIX',color:'#8b8d97',tags:[{t:'sayōnara',c:'classic'},{t:'arcade infinito',c:'offbeat'}],
    activities:[
      {icon:'🛍️',title:'Mañana: Tenjinbashisuji',detail:'Arcade cubierto más largo de Japón (2.6 km, ~600 tiendas). Wagashi, street food de despedida.'},
-     {icon:'✈️',title:'Tarde: Vuelo KIX 16:30 → BCN (Air China vía PVG)',detail:'Haruka Express al aeropuerto (~30€, 70 min). En Shanghai: pasead por el Bund (tránsito sin visado 240h).'},
+     {icon:'✈️',title:'Tarde: Vuelo KIX 16:30 → BCN (Air China vía PVG)',detail:'Haruka Express al aeropuerto (~30€, 70 min). Escala en Shanghái — ya conocéis la ciudad de la ida (Yu Garden, Bund). Si hay tiempo, repetid xiaolongbao en el aeropuerto.'},
    ]},
 ];
 
@@ -1789,7 +1822,7 @@ function renderDays() {
         <div class="day-color" style="background:${d.color}"></div>
         <div class="day-info">
           <div class="day-title">
-            Día ${d.num}
+            ${d.num === 0 ? 'Escala' : 'Día ' + d.num}
             ${d.tags.map(t => `<span class="tag tag-${t.c}">${t.t}</span>`).join('')}
           </div>
           <div class="day-meta">
@@ -2088,7 +2121,7 @@ function renderRestaurants() {
   };
 
   // Day filter buttons
-  const days = [{key:'all',label:'Todos'},...DAILY_EATS.map(d => ({key:String(d.day),label:'D'+d.day}))];
+  const days = [{key:'all',label:'Todos'},...DAILY_EATS.map(d => ({key:String(d.day),label:d.day===0?'🇨🇳 Escala':'D'+d.day}))];
   filterContainer.innerHTML = days.map((d,i) =>
     `<button class="city-filter-btn${i===0?' active':''}" data-day="${d.key}" onclick="filterRestoDay(this,'${d.key}')">${d.label}</button>`
   ).join('');
@@ -2931,12 +2964,18 @@ const PREVIAJE = [
     {id:'pv-maps', text:'Guardar todos los restaurantes y spots en Google Maps',
      detail:'Crear listas "GF Restaurants", "Alojamiento", "Must-see" en Google Maps. Funciona offline con el mapa de Japón descargado.',
      links:[]},
-    {id:'pv-offline', text:'Descargar mapa offline de Japón (Google Maps)',
-     detail:'Google Maps → perfil → Mapas sin conexión → seleccionar zona de Kanto + Kansai. Imprescindible en zonas rurales (Kiso Valley).',
+    {id:'pv-offline', text:'Descargar mapa offline de Japón + Shanghái (Google Maps)',
+     detail:'Google Maps → perfil → Mapas sin conexión → seleccionar zona de Kanto + Kansai + centro de Shanghái. Imprescindible en zonas rurales (Kiso Valley) y para la escala en China.',
      links:[]},
     {id:'pv-efectivo', text:'Sacar efectivo / preparar tarjeta sin comisiones',
      day:'D6–7 · Kiso Valley', detail:'Japón rural (Kiso Valley, Narai, Magome) es cash-only. Llevar ~¥30.000 en efectivo o sacar en 7-Eleven ATM al llegar.',
      links:[]},
+    {id:'pv-shanghai-yuan', text:'Llevar yuanes para la escala en Shanghái',
+     day:'D0 · 14 nov', detail:'Necesitaréis ~100-200¥ CNY (~13-26€) para Maglev (¥50/pp), consigna (¥40-60), xiaolongbao y snacks. Cambiad en el aeropuerto de BCN o sacad en un ATM en Pudong. WeChat Pay / Alipay funcionan para turistas con pasaporte, pero efectivo es más rápido para 4h.',
+     links:[]},
+    {id:'pv-shanghai-esim', text:'eSIM de Shanghai: comprobar cobertura China',
+     day:'D0 · 14 nov', detail:'La eSIM de Japón NO funciona en China. Opciones: (1) Airalo China eSIM (~$5 para 1GB, 7 días) — instaladla como segunda eSIM. (2) WiFi del aeropuerto + offline maps. Google Maps no funciona en China — usad Apple Maps o descargad Amap/Baidu Maps.',
+     links:[{label:'Airalo China',url:'https://www.airalo.com/china-esim'}]},
   ]},
   {section:'⚪ Opcional / nice-to-have', urgency:'opcional', items:[
     {id:'pv-onsen', text:'Consultar higaeri onsen Kawaguchiko',
@@ -3032,18 +3071,13 @@ function isChecked(key) {
     const cached = JSON.parse(localStorage.getItem('jp-checks') || '{}');
     return !!cached[key];
   } catch(e) {
-    // Legacy fallback: read old per-key format
+    // Legacy fallback: old per-key format
     try { return localStorage.getItem('jp-check-' + key) === '1'; } catch(e2) { return false; }
   }
 }
 function toggleCheck(key, val) {
-  // Optimistic update in memory
   _checks[key] = val;
-  // Write to Firestore (syncs to all devices)
-  checksDoc.set({[key]: val}, {merge: true}).catch(err => {
-    console.error('Error syncing checkbox:', err);
-  });
-  // Also cache locally as backup
+  if (checksDoc) checksDoc.set({[key]: val}, {merge: true}).catch(err => console.error('Error syncing checkbox:', err));
   try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
 }
 
@@ -3182,13 +3216,20 @@ function addExpense() {
   const eur = currency === 'eur' ? amount : +(amount / fxRate).toFixed(2);
   const jpy = currency === 'jpy' ? amount : Math.round(amount * fxRate);
   // Write to Firestore (auto-syncs to all devices)
-  expensesRef.add({
+  const expObj = {
     id: Date.now(),
     date: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short'}),
     cat, payer: payer || 'david', forWhom: forWhom || 'both',
     note, eur, jpy, currency,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(err => console.error('Error adding expense:', err));
+    createdAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
+  };
+  if (expensesRef) {
+    expensesRef.add(expObj).catch(err => console.error('Error adding expense:', err));
+  } else {
+    _expenses.push(expObj);
+    try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+    renderExpenses();
+  }
   document.getElementById('exp-amount').value = '';
   document.getElementById('exp-note').value = '';
   // UI updates automatically via onSnapshot
@@ -3196,8 +3237,12 @@ function addExpense() {
 function deleteExpense(id) {
   // Find the Firestore doc ID for this expense
   const exp = _expenses.find(e => e.id === id);
-  if (exp && exp._docId) {
+  if (exp && exp._docId && expensesRef) {
     expensesRef.doc(exp._docId).delete().catch(err => console.error('Error deleting expense:', err));
+  } else {
+    _expenses = _expenses.filter(e => e.id !== id);
+    try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+    renderExpenses();
   }
   // UI updates automatically via onSnapshot
 }
