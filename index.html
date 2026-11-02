@@ -591,8 +591,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   position:relative;overflow:hidden;
 }
 .hoy-day-strip::before{
-  content:'';position:absolute;inset:0;z-index:0;opacity:.12;
-  background:var(--hoy-bg,linear-gradient(135deg,#1a2a3a,#0c0e14));
+  content:'';position:absolute;inset:0;z-index:0;opacity:.25;
+  background:var(--hoy-bg) center/cover no-repeat;
 }
 .hoy-day-strip > *{position:relative;z-index:1}
 .hoy-day-strip-top{display:flex;align-items:flex-start;gap:12px}
@@ -770,11 +770,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   position:relative;overflow:hidden;
 }
 .hoy-pretrip-hero::before{
-  content:'';position:absolute;inset:0;z-index:0;opacity:.18;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 85%, #b8d4e3 0%, transparent 70%),
-    radial-gradient(ellipse 30% 50% at 50% 50%, #e8edf2 0%, transparent 60%),
-    linear-gradient(180deg, #1a2a3a 0%, #2a3a4a 40%, #c4a882 70%, #8faabd 100%);
+  content:'';position:absolute;inset:0;z-index:0;opacity:.35;
+  background:url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=800&q=75') center/cover no-repeat;
 }
 .hoy-pretrip-hero > *{position:relative;z-index:1}
 .hoy-pretrip-num{
@@ -945,8 +942,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 }
 .dias-region::before{
   content:'';position:absolute;left:0;right:0;top:0;bottom:0;
-  background:var(--region-bg,linear-gradient(180deg,rgba(255,255,255,.015),transparent));
-  opacity:.12;border-radius:8px;
+  background:var(--region-bg) center/cover no-repeat;
+  opacity:.2;border-radius:8px;
 }
 .dias-region-name{
   font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;
@@ -1152,8 +1149,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   background:var(--surface2);
 }
 .resto-v2-img{
-  height:80px;position:relative;overflow:hidden;
-  display:flex;align-items:flex-end;padding:8px;
+  height:90px;position:relative;overflow:hidden;
+  display:flex;align-items:flex-end;padding:8px 10px;
 }
 .resto-v2-img::after{
   content:'';position:absolute;inset:0;
@@ -1180,7 +1177,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 .resto-v2-body{padding:10px 12px}
 .resto-v2-desc{font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.5;margin-bottom:8px}
-.resto-v2-meta{display:flex;gap:8px;align-items:center}
+.resto-v2-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .resto-v2-price{
   font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;
   color:rgba(255,255,255,.6);
@@ -1191,7 +1188,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   background:rgba(255,169,77,.5);
 }
 .resto-rating-dot.empty{background:rgba(255,255,255,.08)}
-.resto-v2-tags{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.resto-v2-tags{display:flex;gap:4px;flex-wrap:wrap}
 .resto-v2-tag{
   font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:4px;
   background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);
@@ -1844,7 +1841,7 @@ function setSyncStatus(status) {
   const el = document.getElementById('sync-indicator');
   if (!el) return;
   el.className = 'sync-status ' + status;
-  const labels = {online: 'Sincronizado', offline: 'Sin conexión', syncing: 'Sincronizando…'};
+  const labels = {online: 'Sincronizado ☁️', offline: 'Guardado local 📱', syncing: 'Sincronizando…'};
   el.innerHTML = '<span class="sync-dot"></span>' + labels[status];
 }
 
@@ -2832,11 +2829,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // Region groupings for the vertical timeline
 const REGION_GROUPS = [
-  { name:'🇨🇳 Shanghai', count:'escala', days:[0], bg:'linear-gradient(135deg,#2a1f3d 0%,#4a2a2a 30%,#d4a574 60%,#1a2a3a 100%)' },
-  { name:'🗼 Tokio', count:'3 días', days:[1,2,3], bg:'linear-gradient(135deg,#1a1a2e 0%,#e94560 20%,#16213e 50%,#0f3460 100%)' },
-  { name:'🗻 Fuji & Alpes', count:'4 días', days:[4,5,6,7], transportBefore:'🚌 Bus Fujikyu Shinjuku → Kawaguchiko · 2h', bg:'linear-gradient(160deg,#1a2a3a 0%,#2a3a5a 30%,#e8edf2 55%,#b8d4e3 70%,#4a6a4a 100%)' },
-  { name:'⛩️ Kyoto', count:'4 días', days:[8,9,10,11], transportBefore:'🚌🚃 Magome → Nakatsugawa → Nagoya → Kyoto · ~4h', bg:'linear-gradient(135deg,#3a1a1a 0%,#c4543a 25%,#d4a444 50%,#2a3a2a 80%,#1a2a2a 100%)' },
-  { name:'🦌 Nara & Osaka', count:'4 días', days:[12,13,14,15], transportBefore:'🚃 Kintetsu Kyoto → Nara · 35 min', bg:'linear-gradient(135deg,#2a3a2a 0%,#5a7a3a 30%,#8a7a4a 60%,#3a2a1a 100%)' },
+  { name:'🇨🇳 Shanghai', count:'escala', days:[0], bg:"url('https://images.unsplash.com/photo-1537531383496-f4749b77c61e?w=600&q=70')" },
+  { name:'🗼 Tokio', count:'3 días', days:[1,2,3], bg:"url('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&q=70')" },
+  { name:'🗻 Fuji & Alpes', count:'4 días', days:[4,5,6,7], transportBefore:'🚌 Bus Fujikyu Shinjuku → Kawaguchiko · 2h', bg:"url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=600&q=70')" },
+  { name:'⛩️ Kyoto', count:'4 días', days:[8,9,10,11], transportBefore:'🚌🚃 Magome → Nakatsugawa → Nagoya → Kyoto · ~4h', bg:"url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&q=70')" },
+  { name:'🦌 Nara & Osaka', count:'4 días', days:[12,13,14,15], transportBefore:'🚃 Kintetsu Kyoto → Nara · 35 min', bg:"url('https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?w=600&q=70')" },
 ];
 
 // Route cities for the progress bar
@@ -3773,7 +3770,12 @@ function renderRestaurants() {
     const today = new Date(); today.setHours(0,0,0,0);
     const diff = Math.floor((today - tripStart) / 86400000);
     let dayNum = diff;
-    if (dayNum < 0 || dayNum > 15) dayNum = 3; // Default to day 3 as showcase
+    if (dayNum < 0 || dayNum > 15) {
+      // Pre/post trip: rotate daily through all days with restaurants
+      const daysWithFood = DAILY_EATS.filter(d => d.cena || d.comida).map(d => d.day);
+      const dayOfYear = Math.floor((today - new Date(today.getFullYear(),0,0)) / 86400000);
+      dayNum = daysWithFood[dayOfYear % daysWithFood.length] || 1;
+    }
     const dayData = DAILY_EATS.find(d => d.day === dayNum);
     if (!dayData) return null;
     // Pick first cena spot or first comida spot
@@ -5127,17 +5129,17 @@ function renderHoyDashboard() {
     // Location display (strip emoji)
     const locDisplay = d.location.replace(/^[✈️🗻🎋🏯]+\s*/,'');
 
-    // Background gradients per location (simulate scenic backgrounds)
+    // Background photos per location (Unsplash)
     const hoyBgs = {
-      shanghai: 'linear-gradient(135deg,#2a1f3d 0%,#4a2a2a 30%,#d4a574 60%,#1a2a3a 100%)',
-      tokyo: 'linear-gradient(135deg,#1a1a2e 0%,#e94560 20%,#16213e 50%,#0f3460 100%)',
-      fuji: 'linear-gradient(160deg,#1a2a3a 0%,#2a3a5a 30%,#e8edf2 55%,#b8d4e3 70%,#4a6a4a 100%)',
-      matsumoto: 'linear-gradient(135deg,#1a2a1a 0%,#2a4a2a 30%,#4a3a2a 60%,#2a2a1a 100%)',
-      narai: 'linear-gradient(135deg,#2a1a1a 0%,#4a3a2a 30%,#8a7a5a 60%,#3a2a1a 100%)',
-      magome: 'linear-gradient(135deg,#1a2a1a 0%,#3a5a3a 40%,#6a5a3a 70%,#2a3a2a 100%)',
-      kyoto: 'linear-gradient(135deg,#3a1a1a 0%,#c4543a 25%,#d4a444 50%,#2a3a2a 80%,#1a2a2a 100%)',
-      nara: 'linear-gradient(135deg,#2a3a2a 0%,#5a7a3a 30%,#8a7a4a 60%,#3a2a1a 100%)',
-      osaka: 'linear-gradient(135deg,#1a1a2e 0%,#f4a460 25%,#e94560 50%,#16213e 100%)',
+      shanghai: "url('https://images.unsplash.com/photo-1537531383496-f4749b77c61e?w=800&q=75')",
+      tokyo: "url('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=75')",
+      fuji: "url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=800&q=75')",
+      matsumoto: "url('https://images.unsplash.com/photo-1624601573012-efb68f3a76d6?w=800&q=75')",
+      narai: "url('https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&q=75')",
+      magome: "url('https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=75')",
+      kyoto: "url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&q=75')",
+      nara: "url('https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?w=800&q=75')",
+      osaka: "url('https://images.unsplash.com/photo-1590559899731-a382839e5549?w=800&q=75')",
     };
     const hoyBg = hoyBgs[wKey] || hoyBgs['tokyo'];
 
@@ -5418,8 +5420,13 @@ function isChecked(key) {
 }
 function toggleCheck(key, val) {
   _checks[key] = val;
-  if (checksDoc) checksDoc.set({[key]: val}, {merge: true}).catch(err => console.error('Error syncing checkbox:', err));
+  // Always save locally first
   try { localStorage.setItem('jp-checks', JSON.stringify(_checks)); } catch(e) {}
+  // Then try Firestore
+  if (checksDoc) checksDoc.set({[key]: val}, {merge: true}).catch(err => {
+    console.warn('Checkbox sync failed (offline):', err.message);
+    setSyncStatus('offline');
+  });
 }
 
 // ===================== COPY UTIL =====================
@@ -5564,26 +5571,30 @@ function addExpense() {
     note, eur, jpy, currency,
     createdAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
   };
+  // Always save locally first (immediate feedback)
+  _expenses.push(expObj);
+  try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+  renderExpenses();
+  // Then try Firestore sync
   if (expensesRef) {
-    expensesRef.add(expObj).catch(err => console.error('Error adding expense:', err));
-  } else {
-    _expenses.push(expObj);
-    try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
-    renderExpenses();
+    expensesRef.add(expObj).catch(err => {
+      console.warn('Firestore write failed (offline mode):', err.message);
+      setSyncStatus('offline');
+    });
   }
   document.getElementById('exp-amount').value = '';
   document.getElementById('exp-note').value = '';
   // UI updates automatically via onSnapshot
 }
 function deleteExpense(id) {
-  // Find the Firestore doc ID for this expense
   const exp = _expenses.find(e => e.id === id);
+  // Always update locally first
+  _expenses = _expenses.filter(e => e.id !== id);
+  try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
+  renderExpenses();
+  // Then try Firestore sync
   if (exp && exp._docId && expensesRef) {
-    expensesRef.doc(exp._docId).delete().catch(err => console.error('Error deleting expense:', err));
-  } else {
-    _expenses = _expenses.filter(e => e.id !== id);
-    try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
-    renderExpenses();
+    expensesRef.doc(exp._docId).delete().catch(err => console.warn('Firestore delete failed:', err.message));
   }
   // UI updates automatically via onSnapshot
 }
