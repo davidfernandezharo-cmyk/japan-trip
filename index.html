@@ -903,6 +903,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .dias-region::before{
   content:'';position:absolute;left:0;right:0;top:0;bottom:0;
   background:var(--region-bg) center/cover no-repeat;
+  background-color:#1a1d27;
   opacity:.28;border-radius:10px;
 }
 .dias-region-name{
@@ -2815,7 +2816,7 @@ function getHoyDate() {
 
 // Region groupings for the vertical timeline
 const REGION_GROUPS = [
-  { name:'🇨🇳 Shanghai', count:'escala', days:[0], bg:"url('https://images.unsplash.com/photo-1474181628809-e2bc11a19abc?w=1800&q=85'),linear-gradient(135deg,#1a1040,#2a1858,#3a2870)" },
+  { name:'🇨🇳 Shanghai', count:'escala', days:[0], bg:"url('https://images.unsplash.com/photo-1764555846847-8d1c685b3b56?w=1800&q=85')" },
   { name:'🗼 Tokio', count:'3 días', days:[1,2,3], bg:"url('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1800&q=85')" },
   { name:'🗻 Fuji & Alpes', count:'4 días', days:[4,5,6,7], transportBefore:'🚌 Bus Fujikyu Shinjuku → Kawaguchiko · 2h', bg:"url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=1800&q=85')" },
   { name:'⛩️ Kyoto', count:'4 días', days:[8,9,10,11], transportBefore:'🚌🚃 Magome → Nakatsugawa → Nagoya → Kyoto · ~4h', bg:"url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1800&q=85')" },
@@ -5069,7 +5070,7 @@ function renderHoyDashboard() {
 
     // Background photos per location (Unsplash)
     const hoyBgs = {
-      shanghai: "url('https://images.unsplash.com/photo-1474181628809-e2bc11a19abc?w=2400&q=85'),linear-gradient(135deg,#1a1040,#2a1858,#3a2870)",
+      shanghai: "url('https://images.unsplash.com/photo-1764555846847-8d1c685b3b56?w=2400&q=85')",
       tokyo: "url('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=2400&q=85')",
       fuji: "url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=2400&q=85')",
       matsumoto: "url('https://images.unsplash.com/photo-1624601573012-efb68f3a76d6?w=2400&q=85')",
