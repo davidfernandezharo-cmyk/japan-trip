@@ -616,8 +616,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   display:flex;gap:8px;padding:6px 12px 10px;
 }
 .hoy-fc-day{
-  flex:1;background:var(--surface);border:1px solid var(--border);
+  flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   border-radius:var(--radius-sm);padding:8px 10px;text-align:center;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
 }
 .hoy-fc-label{font-size:.78rem;color:var(--text-muted);font-weight:600;margin-bottom:2px}
 .hoy-fc-temp{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--text)}
@@ -874,11 +875,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 /* Route progress bar */
 .dias-route{position:relative;padding:0}
 .dias-track-bg{
-  position:absolute;top:14px;left:0;right:0;height:4px;
+  position:absolute;top:4px;left:0;right:0;height:4px;
   background:rgba(255,255,255,.06);border-radius:2px;
 }
 .dias-track-fill{
-  position:absolute;top:14px;left:0;height:4px;
+  position:absolute;top:4px;left:0;height:4px;
   background:linear-gradient(90deg,#69db7c,#ffd43b);border-radius:2px;
   transition:width .4s ease;
 }
@@ -1045,6 +1046,32 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 /* Context & alerts inside dias detail — reuse existing classes */
 .dias-acts .check-act{margin-right:0}
 .dias-acts .pv-link{font-size:.68rem;margin-top:3px}
+
+/* Floating "Hoy" button for Itinerario */
+.dias-today-btn{
+  position:fixed;bottom:72px;right:16px;z-index:50;
+  background:var(--accent-gold);color:#0a0a0e;
+  font-size:.82rem;font-weight:800;letter-spacing:.03em;
+  padding:10px 18px;border-radius:24px;border:none;
+  box-shadow:0 4px 16px rgba(255,212,59,.35);
+  cursor:pointer;display:none;
+  transition:transform .15s ease,opacity .15s ease;
+}
+.dias-today-btn:active{transform:scale(.93)}
+
+/* Hoy alerts section */
+.hoy-alerts-section{
+  margin-top:14px;padding:0 2px;
+}
+.hoy-alert-card{
+  background:rgba(255,169,77,.06);border:1px solid rgba(255,169,77,.12);
+  border-radius:10px;padding:10px 14px;margin-bottom:8px;
+  font-size:.82rem;line-height:1.5;color:rgba(255,255,255,.7);
+}
+.hoy-alerts-title{
+  font-size:.78rem;font-weight:700;color:rgba(255,169,77,.7);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;
+}
 
 /* ============ V2 RESTAURANTES ============ */
 
@@ -1765,6 +1792,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 <div class="tab-panel" id="panel-itinerario">
   <div id="dias-hero-container"></div>
   <div id="days-container" class="dias-vtl"></div>
+  <button class="dias-today-btn" id="dias-today-btn" onclick="document.getElementById('dias-today')?.scrollIntoView({behavior:'smooth',block:'center'})">📍 Hoy</button>
 </div>
 
 <!-- ==================== PRE-VIAJE TAB ==================== -->
@@ -2877,6 +2905,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
     // Scroll active tab into view, centered
     btn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+    // Show/hide floating "Hoy" button only on Itinerario tab
+    const todayBtn = document.getElementById('dias-today-btn');
+    if (todayBtn) todayBtn.style.display = (btn.dataset.tab === 'itinerario' && document.getElementById('dias-today')) ? 'block' : 'none';
     // Map init removed (Ruta tab removed)
     if (btn.dataset.tab === 'hoy') renderHoyDashboard();
   });
@@ -3120,7 +3151,7 @@ function renderDays() {
           </div>`;
         }).join('');
 
-        html += `<div class="dias-row now">
+        html += `<div class="dias-row now" id="dias-today">
           ${dateCol}
           <div class="dias-content">
             <div class="dias-expanded">
@@ -3170,6 +3201,15 @@ function renderDays() {
 
   // Also render the hero section
   renderDiasHero();
+
+  // Show/hide "Hoy" floating button
+  const todayBtn = document.getElementById('dias-today-btn');
+  const todayRow = document.getElementById('dias-today');
+  if (todayBtn && todayRow) {
+    todayBtn.style.display = 'block';
+  } else if (todayBtn) {
+    todayBtn.style.display = 'none';
+  }
 }
 
 // ===================== RENDER ACCOMMODATION (V2 Flighty-style) =====================
@@ -5451,6 +5491,13 @@ function renderHoyDashboard() {
       </div>` : ''}
 
       ${buildHoyExpenses()}
+
+      <!-- Day alerts -->
+      ${(DAY_ALERTS[d.num] || []).length ? `
+      <div class="hoy-alerts-section">
+        <div class="hoy-alerts-title">⚠️ Alertas del día</div>
+        ${DAY_ALERTS[d.num].map(a => `<div class="hoy-alert-card">${a}</div>`).join('')}
+      </div>` : ''}
     `;
   } else {
     // ── POST-TRIP STATE ──
