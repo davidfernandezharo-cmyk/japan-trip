@@ -5042,6 +5042,7 @@ function renderHoyDashboard() {
   const tripStart = new Date('2026-11-14T00:00:00+09:00');
   const tripEnd = new Date('2026-11-28T23:59:59+09:00');
   const jpTime = now.toLocaleString('es-ES', {timeZone:'Asia/Tokyo', hour:'2-digit', minute:'2-digit', hour12:false});
+  const bcnTime = now.toLocaleString('es-ES', {timeZone:'Europe/Madrid', hour:'2-digit', minute:'2-digit', hour12:false});
 
   let html = '';
 
@@ -5110,7 +5111,7 @@ function renderHoyDashboard() {
     html = `
       <div class="hoy-status">
         <div class="hoy-sb-left"><div class="hoy-sb-logo">🇯🇵 Japón <span>'26</span></div></div>
-        <div class="hoy-sb-time">🕐 ${jpTime} JP</div>
+        <div class="hoy-sb-time">🕐 ${jpTime} JP · ${bcnTime} BCN</div>
       </div>
       <div class="hoy-pretrip">
         <div class="hoy-pretrip-hero">
@@ -5301,7 +5302,7 @@ function renderHoyDashboard() {
     html = `
       <div class="hoy-status">
         <div class="hoy-sb-left"><div class="hoy-sb-logo">🇯🇵 Japón <span>'26</span></div></div>
-        <div class="hoy-sb-time">🕐 ${jpTime} JP</div>
+        <div class="hoy-sb-time">🕐 ${jpTime} JP · ${bcnTime} BCN</div>
       </div>
 
       <div class="hoy-day-strip" style="--hoy-bg:${hoyBg}">
@@ -5429,7 +5430,7 @@ function renderHoyDashboard() {
     html = `
       <div class="hoy-status">
         <div class="hoy-sb-left"><div class="hoy-sb-logo">🇯🇵 Japón <span>'26</span></div></div>
-        <div class="hoy-sb-time">🕐 ${jpTime} JP</div>
+        <div class="hoy-sb-time">🕐 ${jpTime} JP · ${bcnTime} BCN</div>
       </div>
       <div class="hoy-pretrip">
         <div class="hoy-pretrip-hero">
@@ -5516,6 +5517,7 @@ function updateTripClock() {
   const tripStart = new Date('2026-11-14T00:00:00+09:00');
   const tripEnd = new Date('2026-11-28T23:59:59+09:00');
   const jpTime = now.toLocaleString('es-ES', {timeZone:'Asia/Tokyo', hour:'2-digit', minute:'2-digit', hour12:false});
+  const bcnTime = now.toLocaleString('es-ES', {timeZone:'Europe/Madrid', hour:'2-digit', minute:'2-digit', hour12:false});
 
   if (now < tripStart) {
     const diff = Math.ceil((tripStart - now) / (1000*60*60*24));
@@ -5529,7 +5531,7 @@ function updateTripClock() {
     numEl.textContent = '✨';
     labelEl.textContent = 'fin';
   }
-  if (timeEl) timeEl.textContent = '🕐 ' + jpTime + ' JP';
+  if (timeEl) timeEl.textContent = '🕐 ' + jpTime + ' JP · ' + bcnTime + ' BCN';
 }
 
 // ===================== CHECKLIST =====================
