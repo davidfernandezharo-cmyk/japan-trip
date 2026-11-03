@@ -5072,9 +5072,8 @@ function renderHoyDashboard() {
 
   // ── SHARED: Compact gastos total (reads from Gastos tab data) ──
   function buildHoyExpenses() {
-    let logged = [];
-    try { logged = JSON.parse(localStorage.getItem('jp-expenses') || '[]'); } catch(e) {}
-    const total = logged.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    const logged = getExpenses();
+    const total = logged.reduce((s, e) => s + (e.eur || 0), 0);
     const count = logged.length;
     if (count === 0) {
       return `<div class="hoy-gastos-compact" onclick="switchTab('gastos')" style="cursor:pointer">
@@ -5084,7 +5083,7 @@ function renderHoyDashboard() {
     }
     // Group by category
     const byCat = {};
-    logged.forEach(e => { const c = e.category || 'otros'; byCat[c] = (byCat[c]||0) + (parseFloat(e.amount)||0); });
+    logged.forEach(e => { const c = e.cat || 'otros'; byCat[c] = (byCat[c]||0) + (e.eur||0); });
     const catColors = {transporte:'var(--accent-blue)',comida:'var(--accent-gold)',alojamiento:'var(--accent-pink)',actividades:'var(--accent-purple)',otros:'rgba(255,255,255,.3)'};
     const barSegs = Object.entries(byCat).map(([c,v]) => {
       const w = total > 0 ? ((v/total)*100).toFixed(1) : 0;
