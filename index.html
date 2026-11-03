@@ -770,12 +770,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   position:relative;overflow:hidden;
 }
 .hoy-pretrip-hero::before{
-  content:'';position:absolute;inset:0;z-index:0;opacity:.3;
+  content:'';position:absolute;inset:0;z-index:0;opacity:.5;
   background:url('https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=2400&q=85') center/cover no-repeat;
 }
 .hoy-pretrip-hero::after{
   content:'';position:absolute;inset:0;z-index:0;
-  background:radial-gradient(ellipse at center,rgba(10,10,14,.55) 0%,rgba(10,10,14,.8) 100%);
+  background:radial-gradient(ellipse at center,rgba(10,10,14,.35) 0%,rgba(10,10,14,.7) 100%);
 }
 .hoy-pretrip-hero > *{position:relative;z-index:1}
 .hoy-pretrip-num{
@@ -1127,13 +1127,14 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .resto-badge-gf{background:rgba(105,219,124,.15);color:#69db7c}
 .resto-v2-type{
   position:absolute;top:6px;right:6px;z-index:2;
-  font-size:.72rem;font-weight:800;
-  padding:3px 9px;border-radius:5px;
+  font-size:.68rem;font-weight:800;
+  padding:2px 7px;border-radius:5px;
   background:rgba(0,0,0,.4);backdrop-filter:blur(6px);
-  color:rgba(255,255,255,.6);
+  color:rgba(255,255,255,.6);max-width:55%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.resto-v2-overlay{position:relative;z-index:2}
-.resto-v2-name{font-size:1rem;font-weight:800;color:#fff;margin-top:4px}
+.resto-v2-overlay{position:relative;z-index:2;max-height:58px;overflow:hidden}
+.resto-v2-name{font-size:1rem;font-weight:800;color:#fff;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .resto-v2-hood{font-size:.82rem;color:rgba(255,255,255,.6);margin-top:2px}
 
 .resto-v2-body{padding:10px 12px}
@@ -1228,6 +1229,41 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 }
 .resto-gf-guide strong{color:rgba(105,219,124,.5)}
 /* bump gf guide font */
+
+/* Reservas section */
+.reservas-section{margin:16px 12px 8px;padding:16px;border-radius:14px;background:rgba(177,151,252,.04);border:1px solid rgba(177,151,252,.1)}
+.reservas-title{font-size:.88rem;font-weight:800;color:rgba(177,151,252,.65);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.reservas-empty{font-size:.78rem;color:var(--text-dim);text-align:center;padding:12px 0}
+.reserva-card{display:flex;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);position:relative}
+.reserva-card:last-child{margin-bottom:0}
+.reserva-icon{font-size:1.4rem;flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(177,151,252,.08)}
+.reserva-info{flex:1;min-width:0}
+.reserva-name{font-size:.82rem;font-weight:700;color:var(--text-primary)}
+.reserva-meta{font-size:.72rem;color:var(--text-muted);margin-top:2px;display:flex;flex-wrap:wrap;gap:4px 10px}
+.reserva-note{font-size:.7rem;color:var(--text-dim);margin-top:3px;font-style:italic}
+.reserva-del{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--text-dim);font-size:.7rem;padding:2px 6px;border-radius:4px;transition:all .15s}
+.reserva-del:hover{color:var(--accent-red);background:rgba(255,107,107,.08)}
+.reserva-confirmed{display:inline-block;font-size:.6rem;font-weight:800;color:#69db7c;background:rgba(105,219,124,.1);padding:1px 6px;border-radius:4px;margin-left:4px}
+.reserva-add{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.reserva-add input,.reserva-add select{
+  background:var(--surface3);border:1px solid var(--border);color:var(--text-primary);
+  padding:7px 10px;border-radius:8px;font-size:.75rem;font-family:inherit;
+}
+.reserva-add input{flex:1;min-width:80px}
+.reserva-add select{min-width:60px}
+.reserva-add-btn{
+  background:rgba(177,151,252,.15);color:#b197fc;border:none;
+  padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;cursor:pointer;
+  transition:all .15s;
+}
+.reserva-add-btn:hover{background:rgba(177,151,252,.25)}
+/* Itinerario inline reserva badge */
+.dias-reserva-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.68rem;font-weight:700;color:#b197fc;
+  background:rgba(177,151,252,.08);border:1px solid rgba(177,151,252,.15);
+  padding:3px 8px;border-radius:6px;margin-top:4px;
+}
 
 /* ═══════════════════════════════════════════════════════
    V2 SIN GLUTEN / CELIAC TAB — cel-* prefix
@@ -1798,13 +1834,15 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 <script>
 // ===================== FIREBASE =====================
-let db, expensesRef, checksDoc;
+let db, expensesRef, checksDoc, reservationsRef;
 
 // In-memory caches
 let _expenses = [];
 let _firestoreReady = false;
 let _checks = {};
 let _checksReady = false;
+let _reservations = [];
+let _reservationsReady = false;
 
 // Sync status tracking
 let _syncStatus = 'syncing'; // 'online' | 'offline' | 'syncing'
@@ -1837,6 +1875,8 @@ function goOffline() {
   _firestoreReady = true;
   try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
   _checksReady = true;
+  try { _reservations = JSON.parse(localStorage.getItem('jp-reservations') || '[]'); } catch(e) { _reservations = []; }
+  _reservationsReady = true;
   setSyncStatus('offline');
 }
 
@@ -1859,6 +1899,7 @@ function initFirebase() {
     });
     expensesRef = db.collection('expenses');
     checksDoc = db.collection('checklist').doc('state');
+    reservationsRef = db.collection('reservations');
 
     firebase.auth().signInAnonymously().catch(err => { console.error('Auth error:', err); goOffline(); });
     firebase.auth().onAuthStateChanged(user => {
@@ -1889,6 +1930,19 @@ function initFirebase() {
         if (!_checksReady) {
           try { _checks = JSON.parse(localStorage.getItem('jp-checks') || '{}'); } catch(e) { _checks = {}; }
           _checksReady = true;
+        }
+      });
+
+      reservationsRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true}, snapshot => {
+        _reservations = snapshot.docs.map(doc => ({_docId: doc.id, ...doc.data()}));
+        _reservationsReady = true;
+        try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
+        renderReservasInline();
+      }, err => {
+        console.error('Reservations listener error:', err);
+        if (!_reservationsReady) {
+          try { _reservations = JSON.parse(localStorage.getItem('jp-reservations') || '[]'); } catch(e) { _reservations = []; }
+          _reservationsReady = true;
         }
       });
     });
@@ -2004,6 +2058,11 @@ const GF_RESTAURANTS = [
   {city:'kyoto',name:'Kikyo Sushi',type:'CELIAC-AWARE',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten.',lat:35.0070,lng:135.7640},
   {city:'kyoto',name:'Teppan Tavern Tenamonya',type:'MENÚ GF',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF.',lat:35.0040,lng:135.7760},
   {city:'kyoto',name:'Vermillion Cafe',type:'Opciones GF',desc:'Junto a Fushimi Inari. Hummus, café, postres GF.',lat:34.9670,lng:135.7720},
+  {city:'kyoto',name:'Koma Gallery Cafe',type:'100% GF',desc:'Café-galería 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. 10-19h, cerrado mar.',lat:34.999,lng:135.779},
+  {city:'kyoto',name:'Miyako Takoyaki',type:'100% GF',desc:'Takoyaki de harina de arroz integral 100% GF. 4 min de Gion-Shijo. Tominaga-cho, Higashiyama. 11-22h.',lat:35.0030,lng:135.7720},
+  {city:'kyoto',name:'Waco Crepes',type:'100% GF',desc:'Puesto de crepes 100% GF (dulces y saladas). Productos GF para llevar. Miyagawa-suji, 8 min de Gion-Shijo. 11-17:30.',lat:35.0020,lng:135.7710},
+  {city:'kyoto',name:'GF Deli Al Camino',type:'100% GF',desc:'Pizza al horno de leña + sándwiches 100% GF. Mibubōjōchō, Nakagyo. Tel: 075-823-2626.',lat:35.0050,lng:135.7440},
+  {city:'osaka',name:'Osaka Engine Ramen',type:'GF-ADAPTABLE',desc:'Todo el menú puede ser GF. Controlan contaminación cruzada. Azuchi-machi, Chuo-ku. ~¥2.500.',lat:34.6841,lng:135.5062},
   {city:'osaka',name:'GF Okonomiyaki VIM',type:'100% GF',desc:'Okonomiyaki de harina de arroz. Cero trigo en la cocina.',lat:34.6680,lng:135.5020},
   {city:'osaka',name:'OKO Tako',type:'100% GF',desc:'Único takoyaki GF de Osaka. Masa sin trigo.',lat:34.6740,lng:135.5005},
   {city:'osaka',name:'OKO Fun',type:'100% GF',desc:'Okonomiyaki GF interactivo: lo cocinas en parrillas dedicadas.',lat:34.6738,lng:135.5008},
@@ -2033,9 +2092,9 @@ const DAILY_EATS = [
    seasonal:'🍂 Noviembre: inicio de oden callejero, yakiimo (boniato asado), nabe.',
    comida:null,
    cena:{spots:[
-     {name:'Tachinomi Shimbashi Gado-shita',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Bajo las vías del tren en Shimbashi. Yakitori, cerveza de barril, oficinistas. El Japón real a 10 min de Ginza.',area:'Shimbashi',lat:35.6660,lng:139.7580,gfNote:'Yakitori shio (sal), edamame, sashimi si hay. Llevar tamari.'},
+     {name:'Tachinomi Shimbashi Gado-shita',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Bajo las vías del tren en Shimbashi. Yakitori, cerveza de barril, oficinistas. El Japón real a 10 min de Ginza.',area:'Shimbashi',lat:35.6660,lng:139.7580,gfNote:'Edamame, sashimi si hay = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Llevar tamari.'},
      {name:'Ramen en Nakameguro/Shibuya',type:'Ramen',price:'~1.000¥ (~5€)',desc:'Decenas de opciones a 10 min a pie del hostel. Nakameguro tiene ramenya de barrio sin colas. Primer ramen del viaje.',area:'Nakameguro',lat:35.6442,lng:139.6988,gfNote:'❌ Ramen: fideos de trigo + caldo con soja. No apto. Ver opciones GF.'},
-     {name:'Izakayas en Dogenzaka/Shibuya',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'La zona del hostel está llena de izakayas baratas. No os compliquéis la primera noche — lo que pille.',area:'Shibuya',lat:35.6580,lng:139.6982,gfNote:'Pedir yakitori shio (sal), edamame, sashimi. Llevar tamari para soja.'},
+     {name:'Izakayas en Dogenzaka/Shibuya',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'La zona del hostel está llena de izakayas baratas. No os compliquéis la primera noche — lo que pille.',area:'Shibuya',lat:35.6580,lng:139.6982,gfNote:'Edamame, sashimi, arroz = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Llevar tamari.'},
    ],gf:[
      {name:'Afuri (Harajuku/Shibuya)',type:'Ramen',price:'~1.100¥ (~6€)',desc:'Ramen yuzu-shio con fideos de konnyaku (konjac) como opción GF. Avisar al pedir: confirmar caldo sin soja de trigo.',area:'Shibuya/Harajuku',lat:35.6625,lng:139.7050},
    ]}},
@@ -2047,13 +2106,14 @@ const DAILY_EATS = [
    comida:{spots:[
      {name:'Kayaba Coffee',type:'Kissaten',price:'~900¥ (~5€)',desc:'Kissaten de 1938 en esquina de madera. Sandwich de huevo y café de sifón. Icono de Yanaka. Brunch perfecto.',area:'Yanaka',lat:35.7220,lng:139.7690,gfNote:'El café es GF. Sandwich no (pan de trigo). Pedir solo bebida.'},
      {name:'Menchi-katsu en Yanaka Ginza',type:'Street food',price:'~250¥ (~1€)',desc:'Croqueta de carne frita en la shotengai de Yanaka. Senbei (galletas de arroz) artesanales en varios puestos.',area:'Yanaka Ginza',lat:35.7268,lng:139.7632,gfNote:'⚠️ Menchi-katsu tiene rebozado de trigo. Senbei de arroz SÍ son GF.'},
-     {name:'Torikizoku',type:'Yakitori',price:'~350¥/plato',desc:'Cadena yakitori donde TODO cuesta 350¥: cerveza, brochetas, edamame, arroz. Hack mochilero definitivo.',area:'Koenji / Shibuya (varias)',lat:35.6590,lng:139.7005,gfNote:'Yakitori shio (sal) + edamame + arroz = comida GF completa. Evitar tare (tiene soja).'},
+     {name:'Torikizoku',type:'Yakitori',price:'~350¥/plato',desc:'Cadena yakitori donde TODO cuesta 350¥: cerveza, brochetas, edamame, arroz. Hack mochilero definitivo.',area:'Koenji / Shibuya (varias)',lat:35.6590,lng:139.7005,gfNote:'⚠️ Yakitori shio: pedir "shio dake, shoyu nashi" (parrilla puede estar contaminada). Edamame + arroz + sashimi = comida GF segura. Evitar tare.'},
+     {name:'Sushi Katsura',type:'Sushi',price:'~850-1.050¥ (~5-6€)',desc:'Sushi omakase de barra en Tsukiji. Menú almuerzo 850-1.050¥ (8 piezas). Pescado del mercado a 200m. Si bajáis a Ginza/Tsukiji antes del Kabuki.',area:'Tsukiji',lat:35.6654,lng:139.7707,gfNote:'🟢 Nigirizushi es GF. Pedir con tamari propio en vez de soja. Evitar salsas extras.'},
    ],gf:[
      {name:"GF T's Kitchen",type:'100% GF · CERTIFICADO',price:'~1.200¥ (~7€)',desc:'Ramen, gyoza, tempura, pancakes — todo GF. Sucursales en Roppongi y Ueno.',area:'Ueno / Roppongi',lat:35.6628,lng:139.7310},
    ]},
    cena:{spots:[
      {name:'Fuunji',type:'Ramen',price:'~1.000¥ (~5€)',desc:'Tsukemen de culto en Shinjuku. Cola constante, vale cada minuto. Caldo dashi ultra-concentrado, fideos gruesos fríos.',area:'Shinjuku Sur',lat:35.6887,lng:139.6988,gfNote:'❌ No apto. Fideos de trigo + caldo con soja.'},
-     {name:'Meikyoku Kissa Lion + cena rápida',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'Tras la sesión en el kissaten de escucha, izakayas baratas por toda la zona de Dogenzaka/Shibuya.',area:'Shibuya',lat:35.6595,lng:139.6982,gfNote:'Depende del izakaya. Pedir yakitori shio, sashimi, edamame.'},
+     {name:'Meikyoku Kissa Lion + cena rápida',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'Tras la sesión en el kissaten de escucha, izakayas baratas por toda la zona de Dogenzaka/Shibuya.',area:'Shibuya',lat:35.6595,lng:139.6982,gfNote:'Depende del izakaya. Sashimi, edamame, arroz = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi".'},
    ],gf:[
      {name:"GF T's Kitchen",type:'100% GF · CERTIFICADO',price:'~1.200¥ (~7€)',desc:'Si no fuisteis a mediodía. Sucursal Ueno cierra a las 20:30.',area:'Ueno / Roppongi',lat:35.6628,lng:139.7310},
    ]}},
@@ -2069,9 +2129,10 @@ const DAILY_EATS = [
      {name:'Atomiyosowaka (Kuramae)',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Café 100% plant-based y GF en Kuramae. Parada en el camino hacia Hamarikyu/Asakusa.',area:'Kuramae',lat:35.7000,lng:139.7930},
    ]},
    cena:{spots:[
-     {name:'Hoppy Dōri (Asakusa)',type:'Izakaya al aire libre',price:'~800¥ (~4€)',desc:'Calle de izakayas junto a Sensō-ji. Mesas en la calle, yakitori, hoppy (cerveza barata). Ambiente obrero de posguerra. Llegáis aquí tras el ferry.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'Yakitori shio en cualquier puesto. Evitar salsas. Edamame seguro.'},
+     {name:'Hoppy Dōri (Asakusa)',type:'Izakaya al aire libre',price:'~800¥ (~4€)',desc:'Calle de izakayas junto a Sensō-ji. Mesas en la calle, yakitori, hoppy (cerveza barata). Ambiente obrero de posguerra. Llegáis aquí tras el ferry.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'⚠️ Yakitori: pedir "shio dake" y verificar que no comparten parrilla con tare. Sashimi, edamame, arroz son seguros.'},
      {name:'Onigiri Asakusa Yadoroku',type:'Onigiri',price:'~400¥ (~2€)',desc:'La onigiriya más antigua de Tokio (1954). Onigiri artesanales hechos a mano. 15 variedades. Cierra 17:00, pero si llegáis a tiempo del ferry, bocado rápido.',area:'Asakusa',lat:35.7130,lng:139.7960,gfNote:'🟢 Onigiri de arroz son GF por naturaleza. Elegir rellenos simples: sake (salmón), umeboshi (ciruela), kombu.'},
      {name:'Kamiya Bar (1880)',type:'Bar histórico',price:'~1.000¥ (~5€)',desc:'Bar occidental más antiguo de Japón. Denki Bran (brandy eléctrico) a 45°. Edificio art-déco, barra de madera original.',area:'Asakusa',lat:35.7112,lng:139.7968,gfNote:'Bebidas seguras. Comida limitada — consultar.'},
+     {name:'Hinatomaru Standing Sushi',type:'Sushi',price:'~70-490¥/pieza',desc:'Sushi de pie (tachigui) a 3 min de Senso-ji. Piezas desde 70¥. Sin reserva, rápido. Perfecto antes de Nonbei Yokocho.',area:'Asakusa',lat:35.7118,lng:139.7945,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. Evitar las piezas con salsas.'},
    ],gf:[
      {name:'Tempura Asakusa SAKURA',type:'100% GF',price:'~1.500¥ (~8€)',desc:'Tempura con rebozado de harina de arroz. Reserva obligatoria. A 5 min de Senso-ji.',area:'Asakusa',lat:35.7105,lng:139.7950},
      {name:'Fleur de Sarrasin',type:'100% GF',price:'~1.800¥ (~10€)',desc:'Galettes de alforfón estilo francés. Muelen su propia harina de trigo sarraceno. Cerca de Asakusa.',area:'Kuramae',lat:35.7120,lng:139.7970},
@@ -2177,16 +2238,21 @@ const DAILY_EATS = [
    seasonal:'🍶 Hiyaoroshi: sake de otoño. 🍂 Pico absoluto del koyo. Oden callejero.',
    comida:{spots:[
      {name:'Vermillion Cafe',type:'Café',price:'~800¥ (~4€)',desc:'Junto a Fushimi Inari. Hummus, café, postres. Terraza con vistas a los torii.',area:'Fushimi Inari',lat:34.9670,lng:135.7720,gfNote:'🟢 Opciones GF marcadas en carta. Hummus, ensaladas.'},
-     {name:'Gekkeikan + Torizou',type:'Sake + izakaya',price:'~1.500¥ (~8€)',desc:'Cata en Gekkeikan Museum (600¥, incluye sake) + yakitori en Torizou. Fushimi = la meca del sake.',area:'Fushimi',lat:34.9300,lng:135.7580,gfNote:'Sake puro es GF. Yakitori shio en Torizou es seguro.'},
+     {name:'Gekkeikan + Torizou',type:'Sake + izakaya',price:'~1.500¥ (~8€)',desc:'Cata en Gekkeikan Museum (600¥, incluye sake) + yakitori en Torizou. Fushimi = la meca del sake.',area:'Fushimi',lat:34.9300,lng:135.7580,gfNote:'Sake puro es GF. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Mejor opción GF: sashimi + arroz.'},
    ],gf:[
      {name:'Vermillion Cafe',type:'Opciones GF',price:'~800¥ (~4€)',desc:'Opciones GF marcadas en la carta. Junto a Fushimi Inari.',area:'Fushimi Inari',lat:34.9670,lng:135.7720},
+     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral. 4 min Gion-Shijo. Snack fácil entre Fushimi y Higashiyama. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720},
    ]},
    cena:{spots:[
      {name:'Sugari',type:'Ramen',price:'~1.200¥ (~7€)',desc:'Ramen de wagyu y menudencias en una machiya renovada. Sabor profundo, ambiente zen. Michelin.',area:'Karasuma',lat:35.0080,lng:135.7590,gfNote:'❌ Fideos de trigo + caldo con soja.'},
      {name:'Chidoritei',type:'Sushi',price:'~1.800¥ (~10€)',desc:'Sushi familiar 3ª generación. Saba-zushi (caballa marinada al estilo Kyoto). 8 asientos.',area:'Gion',lat:35.0032,lng:135.7748,gfNote:'🟢 Sushi es GF si pedís con tamari propio. ⚠️ El vinagre del arroz puede tener trigo.'},
+     {name:'Izuu',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sabazushi (caballa prensada) desde 1781. Michelin. Mackerel curado 3 días. Para llevar también. Hanamikoji, Gion.',area:'Gion',lat:35.0035,lng:135.7745,gfNote:'🟢 Sabazushi: arroz + caballa + hoja de kombu. Naturalmente GF. Llevar tamari.'},
    ],gf:[
      {name:'Cafe & Bar Maru',type:'100% GF',price:'~1.500¥ (~8€)',desc:'El dueño ES CELÍACO. Tonkatsu GF. La máxima garantía.',area:'Karasuma',lat:34.9960,lng:135.7580},
      {name:'Teppan Tavern Tenamonya',type:'MENÚ GF',price:'~1.800¥ (~10€)',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF. Cena completa sin gluten.',area:'Gion',lat:35.0040,lng:135.7760},
+     {name:'Koma Gallery Cafe',type:'100% GF',price:'~800¥ (~4€)',desc:'Café 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. Cerrado mar.',area:'Higashiyama',lat:34.999,lng:135.779},
+     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral 100% GF. 4 min de Gion-Shijo, Tominaga-cho. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720},
+     {name:'Waco Crepes',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Crepes GF dulces y saladas. Miyagawa-suji, 8 min Gion-Shijo. 11-17:30.',area:'Gion',lat:35.0020,lng:135.7710},
    ]}},
 
   // ============ DÍA 10 ============
@@ -2205,6 +2271,8 @@ const DAILY_EATS = [
    ],gf:[
      {name:'Kikyo Sushi',type:'CELIAC-AWARE',price:'~1.500¥ (~8€)',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten en la casa.',area:'Gion',lat:35.0070,lng:135.7640},
      {name:'Cafe & Bar Maru',type:'100% GF',price:'~1.500¥ (~8€)',desc:'El dueño ES CELÍACO. Tonkatsu GF perfecto tras un día de trek en Kurama.',area:'Karasuma',lat:34.9960,lng:135.7580},
+     {name:'GF Deli Al Camino',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Pizza al horno de leña + sándwiches 100% GF. Zona Mibubōjō, oeste de Kyoto.',area:'Nakagyo',lat:35.0050,lng:135.7440},
+     {name:'Waco Crepes',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Crepes GF dulces y saladas. Miyagawa-suji, 8 min de Gion-Shijo. 11-17:30.',area:'Gion',lat:35.0020,lng:135.7710},
    ]}},
 
   // ============ DÍA 11 ============
@@ -2220,10 +2288,12 @@ const DAILY_EATS = [
      {name:'Onigiri de konbini + senbei',type:'Alternativa GF',price:'~400¥ (~2€)',desc:'Complemento al yudofu: onigiri + senbei de arroz. Konbini 7-Eleven junto a la estación de Arashiyama.',area:'Arashiyama',lat:35.0150,lng:135.6770},
    ]},
    cena:{spots:[
-     {name:'Pontocho (despedida)',type:'Izakaya',price:'~2.000¥ (~11€)',desc:'Última noche en Kyoto: elige un izakaya en el callejón de Pontocho con terraza sobre el río Kamo. Farolillos, sake caliente, cierre perfecto.',area:'Pontocho',lat:35.0050,lng:135.7700,gfNote:'Izakaya varía. Yakitori shio, sashimi, edamame son GF.'},
+     {name:'Pontocho (despedida)',type:'Izakaya',price:'~2.000¥ (~11€)',desc:'Última noche en Kyoto: elige un izakaya en el callejón de Pontocho con terraza sobre el río Kamo. Farolillos, sake caliente, cierre perfecto.',area:'Pontocho',lat:35.0050,lng:135.7700,gfNote:'Izakaya varía. Sashimi, edamame, arroz son GF. ⚠️ Yakitori: pedir "shio dake, shoyu nashi".'},
+     {name:'Sushitetsu Pontocho',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sushi de barra en Pontocho. Nigiri desde 250¥/2pc. Despedida de Kyoto con sushi junto al río Kamo.',area:'Pontocho',lat:35.0048,lng:135.7697,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. Arroz puede tener vinagre con trigo — preguntar.'},
      {name:'Sugari (si no fuisteis el D9)',type:'Ramen',price:'~1.200¥ (~7€)',desc:'Ramen de wagyu Michelin. Segunda oportunidad si no entrasteis el primer día.',area:'Karasuma',lat:35.0080,lng:135.7590,gfNote:'❌ Fideos de trigo + caldo con soja.'},
    ],gf:[
      {name:'Teppan Tavern Tenamonya',type:'MENÚ GF',price:'~1.800¥ (~10€)',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF. Broche perfecto.',area:'Gion',lat:35.0040,lng:135.7760},
+     {name:'GF Deli Al Camino',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Pizza al horno de leña + sándwiches GF. Zona Mibubōjō. Alternativa a Tenamonya.',area:'Nakagyo',lat:35.0050,lng:135.7440},
    ]}},
 
   // ============ DÍA 12 ============
@@ -2272,17 +2342,19 @@ const DAILY_EATS = [
      {name:'Kizu Market (sashimi de lonja)',type:'Mercado',price:'~800¥ (~4€)',desc:'Mercado mayorista de 300+ años. Sashimi a precio de lonja, fruta, marisco. Cero turistas — donde compran los cocineros.',area:'Daikokucho',lat:34.6590,lng:135.5010,gfNote:'🟢 Sashimi fresco sin soja es GF. Llevar tamari para mojar.'},
      {name:'Daruma',type:'Kushikatsu',price:'~1.200¥ (~7€)',desc:'LA original desde 1929 en Shinsekai. Brochetas fritas crujientes. Regla: NUNCA doble-dipping.',area:'Shinsekai',lat:34.6525,lng:135.5065,gfNote:'❌ Kushikatsu = rebozado de trigo frito.'},
      {name:'Toyo',type:'Sashimi',price:'~1.500¥ (~8€)',desc:'Sashimi de atún rojo y toro flambeado con soplete en plena calle. Kuromon Ichiba. Brutal.',area:'Kuromon Ichiba',lat:34.6685,lng:135.5078,gfNote:'🟢 Sashimi flambeado solo lleva sal. GF.'},
+     {name:'Wakasaya (Nankai Namba)',type:'Sashimi',price:'~720-1.320¥ (~4-8€)',desc:'Sashimi donburi en Nankai Namba Station. Chirashi ¥720, kaisen-don premium ¥1.320. Comida rápida de mercado. Perfecto antes o después de Dotonbori.',area:'Namba',lat:34.6644,lng:135.5010,gfNote:'🟢 Sashimi sobre arroz = GF. Llevar tamari propio.'},
    ],gf:[
      {name:'OKO Fun',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Okonomiyaki GF interactivo: lo cocinas en parrillas dedicadas.',area:'Namba',lat:34.6738,lng:135.5008},
      {name:'Kizu Market sashimi (fresco y GF)',type:'Sashimi GF',price:'~800¥ (~4€)',desc:'Sashimi de lonja sin soja = 100% GF. Llevar tamari. El marisco fresco es la opción más segura del mercado.',area:'Daikokucho',lat:34.6590,lng:135.5010},
    ]},
    cena:{spots:[
      {name:'Depachika Hanshin Umeda',type:'Mercado',price:'~800¥ (~4€)',desc:'Planta -1 de Hanshin. Hack: a partir de 20:00 → hangaku (半額, mitad de precio) en sushi, sashimi, tempura, wagashi. Cena de despedida a mitad de precio.',area:'Umeda',lat:34.7000,lng:135.4970,gfNote:'🟢 Sashimi y sushi en hangaku son la mejor opción GF. Llevar tamari.'},
-     {name:'Ura-Namba tachinomi',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Laberinto de callejones al sur de Namba. Izakayas de 4 taburetes, vino natural, tachinomi. Osaka sin turistas. Última cerveza.',area:'Ura-Namba',lat:34.6640,lng:135.5030,gfNote:'Yakitori shio, edamame, sashimi disponibles. Evitar salsas.'},
+     {name:'Ura-Namba tachinomi',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Laberinto de callejones al sur de Namba. Izakayas de 4 taburetes, vino natural, tachinomi. Osaka sin turistas. Última cerveza.',area:'Ura-Namba',lat:34.6640,lng:135.5030,gfNote:'Sashimi, edamame = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Evitar salsas.'},
      {name:'Mizuno',type:'Okonomiyaki',price:'~1.200¥ (~7€)',desc:'Institución del okonomiyaki desde 1945. Yamaimo-yaki con langostinos. Teppan personal. Cola en Dotonbori.',area:'Dotonbori',lat:34.6690,lng:135.5028,gfNote:'❌ Okonomiyaki = masa de trigo.'},
    ],gf:[
      {name:'Comeconoco Lab',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Última cena GF segura. Todo hecho con harina de arroz.',area:'Namba',lat:34.6810,lng:135.5010},
      {name:"Spy's Oasis (薬膳スパイスカレー)",type:'100% GF BAR',price:'~1.200¥ (~7€)',desc:'Curry medicinal 100% GF + bar. Especias ayurvédicas, harina de arroz. Namba.',area:'Namba',lat:34.6760,lng:135.4980},
+     {name:'Osaka Engine Ramen',type:'GF-ADAPTABLE',price:'~2.500¥ (~14€)',desc:'Todo el menú puede ser GF. Controlan contaminación cruzada. Azuchi-machi, cerca de Sakaisuji-Honmachi Station.',area:'Chuo-ku',lat:34.6841,lng:135.5062},
      {name:'Depachika sashimi hangaku',type:'Sashimi GF',price:'~400¥ (~2€)',desc:'Después de las 20:00: sashimi y sushi a mitad de precio en Hanshin Umeda. Llevar tamari.',area:'Umeda',lat:34.7000,lng:135.4970},
    ]}},
 
@@ -2323,7 +2395,7 @@ const DAYS = [
      {icon:'⛩️',title:'Mañana: Yanaka + Nezu + Sendagi ("Yanesen")',detail:'El barrio que sobrevivió a WWII. Callejones, templos pequeños, gatos, artesanos. Yanaka Ginza para senbei. SCAI The Bathhouse: galería en un baño de 200 años. Hoy Shichi-Go-San — familias con niños en kimono.'},
      {icon:'🎵',title:'Tarde: Koenji — capital punk/vintage',detail:'15 min en Chuo Line. BASE (hardcore), Los Apson (techno), Uptown Record (psych/goth/synth). Ropa vintage a mansalva.'},
      {icon:'🎶',title:'Noche: Meikyoku Kissa Lion (Shibuya)',detail:'Kissaten de escucha con 70+ años. Altavoces hechos a medida, ~10.000 discos. Silencio obligatorio.'},
-     {icon:'🎭',title:'⬆️ Opción: Kabuki en el Kabukiza (sustituye Bunraku)',detail:'La temporada de Bunraku en Osaka no coincide con nuestras fechas, pero en noviembre el Kabukiza de Ginza tiene "Chūshingura" (los 47 ronin) — una de las obras más épicas del repertorio. Matinée 11:00 (~4h) o tarde 16:30 (~4h). Desde ¥5.000. Subtítulos inglés ¥1.500. Si elegís matinée, moved Yanesen a otro rato; si elegís tarde, sacrificáis Koenji. Estación: Higashi-Ginza.'}
+     {icon:'🎭',title:'⬆️ Opción: Kabuki en el Kabukiza — "Michiyuki Tabiji no Hanamuko"',detail:'Nov 2026: Kichirei Kaomise Ôkabuki. El acto que os interesa es "Michiyuki Tabiji no Hanamuko (Ochiudo)" — sesión de MATINÉE (no tarde), 3er acto: 15:03-15:42. Ticket de acto suelto (makumi): ¥5.800 (2ª planta) o ¥1.600 (4ª planta, solo 90 asientos, cola 30 min antes). Matinée completa desde 11:00. Sesión de tarde desde 16:30 (otro programa). Estación: Higashi-Ginza. ⚠️ Reservar entradas web o cola temprana en taquilla del 4º piso. Si vais al matinée completo (11:00-15:42): moved Yanesen a la mañana temprana (7:30-10:00) y saltad Koenji. Si solo al acto suelto (15:00): Yanesen por la mañana → Kabukiza a las 14:30 → Lion por la noche. Koenji queda para otro día.'}
    ]},
   {num:3,date:'Lun 16 nov',location:'Tokio',color:'#b197fc',tags:[{t:'Tokio indie',c:'offbeat'},{t:'ferry al atardecer',c:'classic'},{t:'callejones de 4 asientos',c:'food'}],
    context:'<p><strong>Shimokitazawa y la contracultura tokiota.</strong> "Shimokita" era un pueblo agrícola hasta que el tren lo conectó a Shinjuku en 1927. Su fama indie nació en los 80-90 con la explosión del teatro underground (<em>shōgekijō</em>, pequeños teatros) y los live houses. Los edificios bajos y callejones irregulares sobrevivieron porque no había interés comercial en demolerlos — irónicamente, eso los convirtió en el barrio más codiciado de Tokio para músicos y artistas.</p><p><strong>Hamarikyu Gardens</strong> (浜離宮恩賜庭園) fue el jardín privado de los shōgun Tokugawa desde 1654. Único jardín de Tokio con estanque de agua de mar (el nivel cambia con la marea). La casa de té sobre el agua (<em>Nakajima no Ochaya</em>) se reconstruyó en 1983 pero sigue la tradición del <em>kaiyūshiki teien</em>: jardín diseñado para pasear, donde cada giro revela una vista nueva cuidadosamente compuesta.</p><p><strong>El río Sumida</strong> (隅田川) fue la arteria comercial de Edo. Los almacenes de arroz (<em>kura</em>), las casas de placer del distrito de Yoshiwara y los mercados de pescado de Nihonbashi se abastecían por este río. El ferry que cogeréis sigue una ruta que llevaba existiendo siglos — los Tokugawa lo usaban para conectar Hamarikyu con el castillo de Edo. Desde el barco veréis la Tokyo Skytree (634 m, la torre más alta de Japón) junto a los almacenes de cerveza Asahi con su famosa "llama dorada" diseñada por Philippe Starck.</p><p><strong>Nonbei Yokocho</strong> (のんべい横丁, "callejón de los borrachos") es un vestigio de los mercados negros de posguerra en Shibuya. Unas 40 barracas de madera con capacidad de 2-6 personas cada una. Sobrevive porque los propietarios poseen el suelo de forma colectiva y se han resistido a vender a promotores. Cada vez que hay un incendio (el último fue en 2015), reconstruyen con los mismos materiales.</p>',
@@ -2389,8 +2461,9 @@ const DAYS = [
      {icon:'🗡️',title:'Mañana: Sanjūsangen-dō (1.001 Kannon)',detail:'A 10 min andando de Tōfuku-ji. 120m de nave con 1.001 estatuas doradas de Kannon (s.XII-XIII). Cada una con 1.000 brazos y expresión única. 600¥. 45 min bastan. De las cosas más impactantes de Kyoto.'},
      {icon:'⛩️',title:'Mediodía: Fushimi Inari Taisha',detail:'Desde Tōfuku-ji, 1 parada de tren JR. Miles de torii naranjas. Gratis, 24h. Subida completa 2-3h. Clásico que merece la pena.'},
      {icon:'🍶',title:'Tarde temprano: Fushimi sake district',detail:'Junto a Fushimi Inari. ~40 cervecerías de sake. Gekkeikan Museum (600¥, cata). Barco por el canal. Hiyaoroshi.'},
-     {icon:'🍵',title:'Tarde: Ceremonia del té en Higashiyama (elegir 1)',detail:'De camino de Fushimi a Eikando, parada en Gion/Higashiyama para la ceremonia. Opción A: Fukujuen (Shijo/Teramachi, downtown) — 30 min, tienda flagship de té, ~2.625¥/persona. Opción B: byFood Tea Ceremony (Gion, 5th floor) — 60 min, preparas tu matcha + dulces, ~4.000¥. Opción C: matcha + wagashi en Kodai-ji o cualquier templo de Higashiyama (~500-800¥, sin ceremonia formal pero auténtico). Reservad A o B online con antelación.'},
-     {icon:'✨',title:'Noche: Iluminación Eikando',detail:'A 15 min en bus desde Gion. Arces iluminados reflejados en estanques. 17:30-21:00, 700¥. La más bella de Kyoto.'},
+     {icon:'🚶',title:'Tarde: Paseo por Higashiyama',detail:'De vuelta desde Fushimi, bajad en Gion-Shijo y subid a pie por Higashiyama: Ninenzaka, Sannenzaka, callejones de machiya. Explorad a vuestro ritmo antes del té.'},
+     {icon:'🍵',title:'17:00 — Ceremonia del té: Flower Teahouse ✅ RESERVADO',detail:'Flower Teahouse, Higashiyama. Ceremonia tradicional de matcha + wagashi. Ya tenéis la reserva confirmada para las 17:00. Duración ~45-60 min.'},
+     {icon:'✨',title:'19:00 — Cola para Eikando (iluminación nocturna)',detail:'A 15 min a pie desde Higashiyama. Llegad ~19:00 para la cola de entrada — las puertas abren a las 17:30 pero las colas bajan sobre las 19:00. Arces iluminados reflejados en estanques. 700¥. La más espectacular de Kyoto. Salida ~20:30.'},
    ]},
   {num:10,date:'Lun 23 nov',location:'Kyoto: Kurama → Kibune',color:'#69db7c',tags:[{t:'túnel de arces',c:'seasonal'},{t:'onsen entre montañas',c:'nature'}],
    highlight:'🎌 23 nov = festivo en Japón (勤労感謝の日). Kurama estará más animado — id temprano.',
@@ -2398,7 +2471,7 @@ const DAYS = [
    activities:[
      {icon:'🥾',title:'Mañana: Trek Kurama → Kibune (4 km, 2h)',detail:'Eizan Railway con "túnel de arces iluminados" (Maple Tunnel). Kurama-dera: templo entre cedros. Kibune: aldea junto a un río.'},
      {icon:'♨️',title:'Mediodía: Kurama Onsen',detail:'Rotenburo con vistas a la montaña entre arces. Tattoo-friendly en zona exterior.'},
-     {icon:'🎨',title:'Tarde: Exposición "El Cuento de Genji"',detail:'Kyoto National Museum. Reunión de tesoros cada ~50 años. Hasta 29 nov. 2.200¥. Irrepetible.'},
+     {icon:'🎮',title:'Tarde: Nintendo Museum (Ogura/Uji)',detail:'Museo interactivo de Nintendo, abierto desde 2024. Historia desde las hanafuda (1889) hasta Switch. Zona jugable con juegos retro gigantes. ¥3,300. Entradas por LOTERÍA online (reservar con antelación en my.nintendo.com). Eizan a Rokujizo + bus ~40 min. Alternativa si no hay entrada: Manga Museum en el centro (¥900, 50.000 mangas para leer en el césped).'},
      {icon:'✨',title:'Noche: Iluminación Kiyomizu-dera',detail:'21-30 nov confirmado. Escenario de madera con arces iluminados. Hasta 21:30.'},
    ]},
   {num:11,date:'Mar 24 nov',location:'Kyoto: Arashiyama',color:'#f783ac',tags:[{t:'bambú al alba',c:'seasonal'},{t:'jardín zen maestro',c:'classic'},{t:'despedida de Kyoto',c:'offbeat'}],
@@ -2525,11 +2598,12 @@ const TIPS = [
 const DAY_ALERTS = {
   1: ['🕐 Check-in Wise Owl Shibuya: 16:00–23:00 · Self check-in fuera de horario recepción',
       '✈️ Aterrizáis 18:10 NRT — con inmigración + NEX llegaréis a Shibuya ~20:30. Primera noche tranquila, no os compliquéis.',
+      '🎭 ⚠️ RESERVAR HOY: Entradas Kabuki para MAÑANA (D2). "Michiyuki Tabiji no Hanamuko" — matinée 3er acto 15:03. Ticket makumi ¥5.800 (2ª) o ¥1.600 (4ª, cola). Web: kabuki-bito.jp o cola en taquilla 4º piso del Kabukiza.',
       '📋 PRE-VIAJE: Comprar eSIM antes de salir (Ubigi/Airalo/Holafly, ~18€ 15 días)',
       '📋 PRE-VIAJE: Contratar seguro de viaje',
       '📋 PRE-VIAJE: Llevar tamari sin gluten (sachets San-J) desde casa',
       '📋 PRE-VIAJE: Cargar Suica/Pasmo en el móvil o comprar IC card en Narita'],
-  2: ['🎭 OPCIÓN: Kabuki en Kabukiza (Ginza) — "Chūshingura" (47 ronin). Matinée 11:00 o tarde 16:30, ~4h. Desde ¥5.000. Subtítulos inglés ¥1.500. Sustituye al Bunraku de Osaka (temporada no coincide). Entradas a la venta 14 oct en kabuki-bito.jp'],
+  2: ['🎭 KABUKI: Kabukiza (Ginza) — "Michiyuki Tabiji no Hanamuko". MATINÉE 3er acto: 15:03-15:42. Makumi: ¥5.800 (2ª planta) o ¥1.600 (4ª, 90 asientos). Si matinée completa (11:00-15:42): Yanesen 7:30-10:00, saltad Koenji. Si solo acto suelto: Yanesen mañana → Kabukiza 14:30 → Lion noche.'],
   3: ['🌿 Hamarikyu cierra 17:00 (última entrada 16:30) — id a las 15:00-15:30 para disfrutarlo con calma antes del ferry',
       '⛴️ Ferry Sumida: último ferry ~16:30-17:00, consultad horarios (suijobus.co.jp). Al atardecer es espectacular.',
       '🌙 Senso-ji abierto 24h (exterior). Iluminado de noche sin gente — vale la pena aunque sea lunes.'],
@@ -2543,16 +2617,19 @@ const DAY_ALERTS = {
       '⚠️ Supermercado Magome cierra ~17:00',
       '🚐 Shuttle onsen: 19:00 (vuelta 21:00)'],
   8: ['🕐 Check-in Fujitaya BnB Kyoto: 16:00–19:00 · ⚠️ Avisad si llegáis tarde',
-      '🎟️ RESERVAR: Ceremonia del té D9 — Fukujuen (Shijo, ¥2.625) o byFood Gion (~¥4.000) — reservad online antes',
-      '🎟️ RESERVAR: Entradas Eikando iluminación nocturna D9 — comprad online si hay venta anticipada (eikando.or.jp)'],
-  9: ['🍵 Ceremonia del té: ¿habéis reservado? Fukujuen (Shijo) o byFood (Gion) — plazas limitadas en noviembre, reservad online',
+      '🍵 Mañana D9: Ceremonia del té Flower Teahouse 17:00 ✅ YA RESERVADO',
+      '🎟️ RECORDAR: Eikando iluminación D9 — no se puede reservar, id a la cola ~19:00 (700¥)',
+      '🍣 RESERVAS CENA D9: Llamar a Chidoritei (8 asientos, sushi familiar, Gion) y Cafe & Bar Maru (el dueño celíaco — sitio pequeño). Izuu (sabazushi) no necesita reserva pero id fuera de hora punta o comprad para llevar.'],
+  9: ['🍵 Ceremonia del té: Flower Teahouse 17:00 ✅ RESERVADO · Higashiyama. Matcha + wagashi ~45-60 min.',
       '🎟️ Tofuku-ji 6:30 AM: en pico koyo puede haber cola incluso temprano — id lo antes posible',
-      '✨ Eikando iluminación: 17:30–21:00 · Colas largas sin entrada anticipada — id a las 17:00'],
+      '✨ Eikando iluminación: puertas 17:30, colas bajan ~19:00 · 700¥ · Arces iluminados reflejados en estanques'],
   10: ['🎌 FESTIVO: 勤労感謝の日 (Día del Trabajo) — templos y trenes más llenos de lo normal',
-       '🎟️ Expo "El Cuento de Genji" — Kyoto National Museum (2.200¥): comprad entrada anticipada online (kyohaku.go.jp) — exposición irrepetible, colas enormes',
+       '🎮 Nintendo Museum (Ogura/Uji): ¥3.300 · Entradas por LOTERÍA online (my.nintendo.com) — reservar con antelación. Alternativa: Manga Museum centro (¥900).',
        '♨️ Kurama Onsen: puede llenarse en festivo — id temprano (abre 10:00)',
-       '🎟️ Kiyomizu-dera iluminación nocturna: consultar si hay venta anticipada (kiyomizudera.or.jp)'],
-  11: ['🎋 Arashiyama: id al bambú a las 7:00 — a las 9:00 es intransitable'],
+       '🎟️ Kiyomizu-dera iluminación nocturna: consultar si hay venta anticipada (kiyomizudera.or.jp)',
+       '🍣 CENA: Kikyo Sushi (Gion, celiac-aware con soja GF) — llamar para reservar, es pequeño. Tenamonya (GF teppan) — llamar también, popular entre celíacos.'],
+  11: ['🎋 Arashiyama: id al bambú a las 7:00 — a las 9:00 es intransitable',
+       '🍣 CENA DESPEDIDA: Sushitetsu Pontocho (sushi de barra) — intentad reservar, Pontocho se llena el martes noche con turistas de koyo. Alternativa: cualquier izakaya del callejón con terraza al río.'],
   12: ['⚠️ SLOW HOUSE NARA: Check-in 16:00–20:00 · Estricto, llegad antes de las 20:00',
        '🧳 Consigna SLOW HOUSE: solo 10:00–13:00',
        '📋 Mañana último día Kyoto: devolved bicis Fujitaya antes de check-out'],
@@ -3047,6 +3124,7 @@ function renderDays() {
               ${contextHtml}
               ${alertsHtml}
               <div class="dias-acts">${activitiesHtml}</div>
+              <div class="dias-reserva-slot" data-day="${d.num}"></div>
               ${transportHtml}
             </div>
           </div>
@@ -3070,6 +3148,7 @@ function renderDays() {
               ${contextHtml}
               ${alertsHtml}
               <div class="dias-acts">${activitiesHtml}</div>
+              <div class="dias-reserva-slot" data-day="${d.num}"></div>
               ${transportHtml}
             </details>
           </div>
@@ -3079,6 +3158,7 @@ function renderDays() {
   });
 
   container.innerHTML = html;
+  renderReservasInline();
 
   // Also render the hero section
   renderDiasHero();
@@ -3425,9 +3505,9 @@ function renderCeliac() {
 
   // Safe foods (all original + extras)
   const safeFoods = [
-    'Arroz blanco (gohan)','Sashimi (sin soja)','Onigiri (solo arroz)','Yakitori shio (sal)',
+    'Arroz blanco (gohan)','Sashimi (sin soja)','Onigiri (solo arroz)',
     'Edamame','Mochi (arroz)','Yakiniku (sin tare)','Yakiimo (boniato)',
-    'Tamago (huevo)','Dango (arroz)',
+    'Tamago (huevo)','Dango (arroz)','Nigirizushi (arroz + pescado)',
   ];
 
   // Konbini items
@@ -3621,6 +3701,134 @@ window.celCopyPhrase = function(idx, text) {
   }
 };
 
+// ===================== RESERVATIONS =====================
+function getReservations() {
+  if (_reservationsReady) return _reservations;
+  try { return JSON.parse(localStorage.getItem('jp-reservations') || '[]'); } catch(e) { return []; }
+}
+
+function addReservation() {
+  const name = document.getElementById('res-name').value.trim();
+  if (!name) return;
+  const day = parseInt(document.getElementById('res-day').value) || -1;
+  const time = document.getElementById('res-time').value.trim();
+  const meal = document.getElementById('res-meal').value;
+  const note = document.getElementById('res-note').value.trim();
+  const resObj = {
+    id: Date.now(),
+    name, day, time, meal, note, confirmed: true,
+    createdAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
+  };
+  _reservations.push(resObj);
+  try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
+  renderReservasInline();
+  if (reservationsRef) {
+    reservationsRef.add(resObj).catch(err => {
+      console.warn('Reservations Firestore write failed:', err.message);
+      setSyncStatus('offline');
+    });
+  }
+  document.getElementById('res-name').value = '';
+  document.getElementById('res-time').value = '';
+  document.getElementById('res-note').value = '';
+}
+
+function deleteReservation(id) {
+  const res = _reservations.find(r => r.id === id);
+  _reservations = _reservations.filter(r => r.id !== id);
+  try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
+  renderReservasInline();
+  if (res && res._docId && reservationsRef) {
+    reservationsRef.doc(res._docId).delete().catch(err => console.warn('Reservation delete failed:', err.message));
+  }
+}
+
+function renderReservasInline() {
+  // Re-render the reservas section in Restaurantes tab if visible
+  const restoContainer = document.getElementById('resto-reservas-list');
+  if (restoContainer) renderReservasSection(restoContainer);
+  // Re-render itinerario reservation badges
+  const daysPanel = document.getElementById('panel-days');
+  if (daysPanel) {
+    daysPanel.querySelectorAll('.dias-reserva-slot').forEach(slot => {
+      const dayNum = parseInt(slot.dataset.day);
+      const dayRes = getReservations().filter(r => r.day === dayNum);
+      if (dayRes.length > 0) {
+        slot.innerHTML = dayRes.map(r =>
+          `<div class="dias-reserva-badge">📋 ${r.name}${r.time ? ' · '+r.time : ''}${r.meal ? ' ('+r.meal+')' : ''}</div>`
+        ).join('');
+      } else {
+        slot.innerHTML = '';
+      }
+    });
+  }
+}
+
+function renderReservasSection(container) {
+  const reservations = getReservations();
+  const dayLocMap = {};
+  DAILY_EATS.forEach(d => { dayLocMap[d.day] = d.loc; });
+
+  let html = '';
+  if (reservations.length === 0) {
+    html = '<div class="reservas-empty">Sin reservas aún. Añade la primera para ir organizando el viaje.</div>';
+  } else {
+    const sorted = [...reservations].sort((a,b) => a.day - b.day);
+    sorted.forEach(r => {
+      const dayLabel = r.day >= 0 ? `Día ${r.day}` : 'Sin día';
+      const loc = dayLocMap[r.day] || '';
+      html += `<div class="reserva-card">
+        <div class="reserva-icon">📋</div>
+        <div class="reserva-info">
+          <div class="reserva-name">${r.name}<span class="reserva-confirmed">✓ RESERVADO</span></div>
+          <div class="reserva-meta">
+            <span>📅 ${dayLabel}${loc ? ' · '+loc : ''}</span>
+            ${r.time ? '<span>🕐 '+r.time+'</span>' : ''}
+            ${r.meal ? '<span>🍽️ '+r.meal+'</span>' : ''}
+          </div>
+          ${r.note ? '<div class="reserva-note">'+r.note+'</div>' : ''}
+        </div>
+        <span class="reserva-del" onclick="deleteReservation(${r.id})">✕</span>
+      </div>`;
+    });
+  }
+
+  // Add form
+  html += `<div class="reserva-add">
+    <input id="res-name" type="text" placeholder="Restaurante / lugar" style="flex:2">
+    <select id="res-day">
+      <option value="-1">Día…</option>
+      ${Array.from({length:16},(_,i) => `<option value="${i}">D${i}</option>`).join('')}
+    </select>
+    <input id="res-time" type="text" placeholder="Hora" style="max-width:70px">
+    <select id="res-meal">
+      <option value="">Tipo…</option>
+      <option value="Comida">Comida</option>
+      <option value="Cena">Cena</option>
+      <option value="Actividad">Actividad</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <input id="res-note" type="text" placeholder="Nota (opcional)" style="flex:2">
+    <button class="reserva-add-btn" onclick="addReservation()">+ Reserva</button>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+function seedReservations() {
+  const existing = getReservations();
+  if (existing.length > 0) return; // already has data
+  const seeds = [
+    { id: 1700000001, name: 'Haginoya · nit de Magome', day: 7, time: '19:00', meal: 'Cena', note: 'Reservat. Soba + plats locals. Última nit Nakasendo.', confirmed: true, createdAt: new Date() },
+    { id: 1700000002, name: 'Flower Teahouse · Ceremonia del té', day: 9, time: '17:00', meal: 'Actividad', note: 'Reservat ✅ Matcha + wagashi, Higashiyama.', confirmed: true, createdAt: new Date() },
+  ];
+  seeds.forEach(s => _reservations.push(s));
+  try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
+  if (reservationsRef) {
+    seeds.forEach(s => reservationsRef.add(s).catch(err => console.warn('Seed write failed:', err.message)));
+  }
+}
+
 // ===================== RENDER RESTAURANTS (V2) =====================
 function renderRestaurants() {
   const container = document.getElementById('resto-v2-container');
@@ -3786,6 +3994,12 @@ function renderRestaurants() {
       <span class="resto-chip ${gfOnly?'on':''}" style="${gfOnly?'':'border-color:rgba(105,219,124,.15);color:rgba(105,219,124,.4)'}" onclick="restoToggleGf(this)"><span class="resto-chip-icon">🌾</span> Solo GF</span>
     </div>`;
 
+    // Reservas section
+    html += `<div class="reservas-section">
+      <div class="reservas-title">📋 Reservas confirmadas</div>
+      <div id="resto-reservas-list"></div>
+    </div>`;
+
     // Seasonal bar
     html += `<div class="resto-seasonal">
       <div class="resto-seasonal-title">🍂 Comida de temporada — noviembre</div>
@@ -3796,7 +4010,7 @@ function renderRestaurants() {
 
     // GF quick guide
     html += `<div class="resto-gf-guide">
-      <strong>🌾 Guía celíaca rápida:</strong> Llevar tamari (soja sin gluten). Seguros: sashimi, onigiri, yakitori shio (sal), edamame, arroz, mochi. Peligro: soba, tempura, ramen, udon, curry, salsa de soja.
+      <strong>🌾 Guía celíaca rápida:</strong> Llevar tamari (soja sin gluten). Seguros: sashimi, nigirizushi, onigiri, edamame, arroz, mochi. ⚠️ Yakitori: la sal puede estar contaminada con soja en parrillas compartidas — pedir "shio dake, shoyu nashi". Peligro: soba, tempura, ramen, udon, curry, salsa de soja.
     </div>`;
 
     // Featured pick
@@ -3879,6 +4093,9 @@ function renderRestaurants() {
     }
 
     container.innerHTML = html;
+    // Render reservas sub-section after DOM is populated
+    const resListEl = document.getElementById('resto-reservas-list');
+    if (resListEl) renderReservasSection(resListEl);
   }
 
   // Expose filter functions globally
@@ -5178,6 +5395,26 @@ function renderHoyDashboard() {
         <div class="hoy-gf-strip-arrow">›</div>
       </div>` : ''}
 
+      <!-- Reservas del día -->
+      ${(function(){
+        const dayRes = getReservations().filter(r => r.day === d.num);
+        if (dayRes.length === 0) return '';
+        return `<div class="reservas-section" style="margin-top:12px">
+          <div class="reservas-title">📋 Reservas hoy</div>
+          ${dayRes.map(r => `<div class="reserva-card">
+            <div class="reserva-icon">📋</div>
+            <div class="reserva-info">
+              <div class="reserva-name">${r.name}<span class="reserva-confirmed">✓ RESERVADO</span></div>
+              <div class="reserva-meta">
+                ${r.time ? '<span>🕐 '+r.time+'</span>' : ''}
+                ${r.meal ? '<span>🍽️ '+r.meal+'</span>' : ''}
+              </div>
+              ${r.note ? '<div class="reserva-note">'+r.note+'</div>' : ''}
+            </div>
+          </div>`).join('')}
+        </div>`;
+      })()}
+
       <!-- Next day preview -->
       ${nextDay ? `
       <div class="hoy-next-preview" onclick="switchTab('itinerario')">
@@ -5644,6 +5881,8 @@ window.addEventListener('DOMContentLoaded', () => {
   renderPreviaje();
   renderTodayCard();
   renderHoyDashboard();
+  seedReservations();
+  renderReservasInline();
   updateTripClock();
   setInterval(() => { updateTripClock(); renderTodayCard(); renderHoyDashboard(); }, 60000);
 });
