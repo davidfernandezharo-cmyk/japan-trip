@@ -626,7 +626,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 /* Mini-map */
 .hoy-mini-map{
   margin:14px 12px 6px;padding:14px;border-radius:var(--radius);
-  background:var(--surface);position:relative;overflow:hidden;height:120px;
+  background:var(--surface);position:relative;overflow:hidden;height:135px;
 }
 .hoy-mini-map-bg{
   position:absolute;inset:0;opacity:.15;
@@ -639,18 +639,22 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   color:rgba(255,255,255,.2);z-index:2;
 }
 .hoy-map-route{
-  position:absolute;top:45%;left:10%;right:10%;
+  position:absolute;top:48%;left:6%;right:6%;
   display:flex;align-items:center;justify-content:space-between;z-index:2;
 }
-.hoy-map-stop{display:flex;flex-direction:column;align-items:center;gap:4px}
+.hoy-map-stop{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
 .hoy-map-dot{
   width:10px;height:10px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.2);
+  border:2px solid rgba(255,255,255,.2);z-index:1;
 }
 .hoy-map-dot.done{background:rgba(105,219,124,.5);border-color:rgba(105,219,124,.5)}
 .hoy-map-dot.now{background:var(--accent-gold);border-color:var(--accent-gold);box-shadow:0 0 8px rgba(255,212,59,.5)}
 .hoy-map-dot.future{background:transparent}
-.hoy-map-stop-name{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.3);white-space:nowrap}
+.hoy-map-stop-name{font-size:.58rem;font-weight:700;color:rgba(255,255,255,.3);white-space:nowrap;position:absolute;left:50%;transform:translateX(-50%);max-width:72px;overflow:hidden;text-overflow:ellipsis}
+.hoy-map-stop-name.pos-below{top:calc(100% + 4px)}
+.hoy-map-stop-name.pos-above{bottom:calc(100% + 4px)}
+.hoy-map-stop-name.pos-first{left:0;transform:none}
+.hoy-map-stop-name.pos-last{left:auto;right:0;transform:none}
 .hoy-map-stop-name.now{color:var(--accent-gold)}
 .hoy-map-line{
   flex:1;height:2px;margin:0 -2px;
@@ -2053,7 +2057,7 @@ const GF_RESTAURANTS = [
   {city:'tokyo',name:"GF T's Kitchen",type:'100% GF · CERTIFICADO',desc:'Ramen, gyoza, tempura, pancakes — todo GF. Roppongi/Ueno.',lat:35.6628,lng:139.7310},
   {city:'matsumoto',name:'Temariya',type:'100% GF',desc:'Baumkuchen 100% harina de arroz. "The best in the world".',lat:36.2375,lng:137.9715},
   {city:'matsumoto',name:'Soba Takagi',type:'CON CUIDADO',desc:'Juwari soba (100% alforfón), pero salsas con soja. Llevar tamari.',lat:36.2335,lng:137.9695},
-  {city:'kyoto',name:'Gion Soy Milk Ramen UNO',type:'100% GF',desc:'Único ramen 100% GF de Japón. Leche de soja. Vegano.',lat:35.0050,lng:135.7750},
+  {city:'kyoto',name:'Gion Soy Milk Ramen UNO YUKIKO',type:'100% GF',desc:'Único ramen 100% GF de Japón. Fideos de arroz + leche de soja. Vegano. Gion, Higashiyama-ku. 4 locales en Kyoto (Gion, Sanjo, Kyoto Station, Umekoji).',lat:35.0050,lng:135.7750},
   {city:'kyoto',name:'Cafe & Bar Maru',type:'100% GF',desc:'El dueño ES CELÍACO. Tonkatsu GF. La máxima garantía.',lat:34.9960,lng:135.7580},
   {city:'kyoto',name:'Kikyo Sushi',type:'CELIAC-AWARE',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten.',lat:35.0070,lng:135.7640},
   {city:'kyoto',name:'Teppan Tavern Tenamonya',type:'MENÚ GF',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF.',lat:35.0040,lng:135.7760},
@@ -2064,8 +2068,7 @@ const GF_RESTAURANTS = [
   {city:'kyoto',name:'GF Deli Al Camino',type:'100% GF',desc:'Pizza al horno de leña + sándwiches 100% GF. Mibubōjōchō, Nakagyo. Tel: 075-823-2626.',lat:35.0050,lng:135.7440},
   {city:'osaka',name:'Osaka Engine Ramen',type:'GF-ADAPTABLE',desc:'Todo el menú puede ser GF. Controlan contaminación cruzada. Azuchi-machi, Chuo-ku. ~¥2.500.',lat:34.6841,lng:135.5062},
   {city:'osaka',name:'GF Okonomiyaki VIM',type:'100% GF',desc:'Okonomiyaki de harina de arroz. Cero trigo en la cocina.',lat:34.6680,lng:135.5020},
-  {city:'osaka',name:'OKO Tako',type:'100% GF',desc:'Único takoyaki GF de Osaka. Masa sin trigo.',lat:34.6740,lng:135.5005},
-  {city:'osaka',name:'OKO Fun',type:'100% GF',desc:'Okonomiyaki GF interactivo: lo cocinas en parrillas dedicadas.',lat:34.6738,lng:135.5008},
+  {city:'osaka',name:'OKO - Fun Okonomiyaki Bar',type:'GF-ADAPTABLE',desc:'Okonomiyaki, takoyaki, gyoza con opciones GF (menú vegetariano = todo GF). Controlan contaminación cruzada. Higashishinsaibashi, Chuo-ku. 11:30-22:00.',lat:34.6695,lng:135.5040},
   {city:'osaka',name:'Comeconoco Lab',type:'100% GF',desc:'"Laboratorio" GF. Tostadas, sándwiches, pasteles de arroz.',lat:34.6810,lng:135.5010},
   {city:'osaka',name:"Spy's Oasis (薬膳スパイスカレー)",type:'100% GF BAR',desc:'Curry medicinal + bar 100% GF. Harina de arroz, especias ayurvédicas.',lat:34.6760,lng:135.4980},
   {city:'nara',name:'Café Tamon',type:'Opciones GF',desc:'Café junto a Nara Park con opciones GF: arroz, postres de harina de arroz.',lat:34.6850,lng:135.8370},
@@ -2229,7 +2232,8 @@ const DAILY_EATS = [
      {name:'Matsuba',type:'Soba',price:'~1.000¥ (~5€)',desc:'Inventaron el nishin soba (soba con arenque seco) en 1861. Cuatro generaciones. EL plato de invierno de Kyoto.',area:'Gion',lat:35.0038,lng:135.7740,gfNote:'⚠️ La soba puede ser mixta. La salsa tiene soja. Llevar tamari.'},
      {name:'Menami',type:'Obanzai',price:'~1.500¥ (~8€)',desc:'Cocina casera de Kyoto (obanzai) de 75+ años. Counter íntimo, platos de temporada.',area:'Kiyamachi',lat:35.0052,lng:135.7690,gfNote:'Obanzai varía. Pedir platos sin soja: verduras hervidas, tofu, sashimi.'},
    ],gf:[
-     {name:'Gion Soy Milk Ramen UNO',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Único ramen 100% GF de Japón. Leche de soja, fideos de arroz. Vegano. En Gion.',area:'Gion',lat:35.0050,lng:135.7750},
+     {name:'Gion Soy Milk Ramen UNO YUKIKO',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Único ramen 100% GF de Japón. Fideos de arroz + leche de soja. Vegano. Gion. (@unoyukiko.ramen)',area:'Gion',lat:35.0050,lng:135.7750},
+     {name:'GF Deli Al Camino',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Pizza al horno de leña + sándwiches 100% GF. Mibubōjō, oeste de Kyoto. Primera noche: buena opción cerca del alojamiento.',area:'Nakagyo',lat:35.0050,lng:135.7440},
    ]}},
 
   // ============ DÍA 9 ============
@@ -2330,7 +2334,7 @@ const DAILY_EATS = [
      {name:'Kinryu Ramen',type:'Ramen',price:'~700¥ (~4€)',desc:'Ramen 24h bajo el dragón dorado. Tonkotsu espeso + arroz y encurtidos gratis ilimitados. Primera noche en Osaka.',area:'Dotonbori',lat:34.6693,lng:135.5025,gfNote:'❌ Fideos de trigo. Pero el arroz blanco gratis es GF.'},
      {name:'Takoyaki Wanaka',type:'Street food',price:'~600¥ (~3€)',desc:'Takoyaki cremosos, crujientes. Pulpo tierno, salsa especial. La mejor versión del clásico de Osaka.',area:'Namba',lat:34.6680,lng:135.5015,gfNote:'❌ Masa de takoyaki lleva harina de trigo.'},
    ],gf:[
-     {name:'OKO Tako',type:'100% GF',price:'~700¥ (~4€)',desc:'Único takoyaki GF de Osaka. Masa sin trigo.',area:'Namba',lat:34.6740,lng:135.5005},
+     {name:'OKO - Fun Okonomiyaki Bar',type:'GF-ADAPTABLE',price:'~700-1.200¥ (~4-7€)',desc:'Okonomiyaki + takoyaki con opciones GF. Menú vegetariano = todo GF. Controlan contaminación cruzada. Higashishinsaibashi.',area:'Shinsaibashi',lat:34.6695,lng:135.5040},
      {name:'GF Okonomiyaki VIM',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Okonomiyaki de harina de arroz. Cero trigo en la cocina.',area:'Namba',lat:34.6680,lng:135.5020},
    ]}},
 
@@ -2344,7 +2348,7 @@ const DAILY_EATS = [
      {name:'Toyo',type:'Sashimi',price:'~1.500¥ (~8€)',desc:'Sashimi de atún rojo y toro flambeado con soplete en plena calle. Kuromon Ichiba. Brutal.',area:'Kuromon Ichiba',lat:34.6685,lng:135.5078,gfNote:'🟢 Sashimi flambeado solo lleva sal. GF.'},
      {name:'Wakasaya (Nankai Namba)',type:'Sashimi',price:'~720-1.320¥ (~4-8€)',desc:'Sashimi donburi en Nankai Namba Station. Chirashi ¥720, kaisen-don premium ¥1.320. Comida rápida de mercado. Perfecto antes o después de Dotonbori.',area:'Namba',lat:34.6644,lng:135.5010,gfNote:'🟢 Sashimi sobre arroz = GF. Llevar tamari propio.'},
    ],gf:[
-     {name:'OKO Fun',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Okonomiyaki GF interactivo: lo cocinas en parrillas dedicadas.',area:'Namba',lat:34.6738,lng:135.5008},
+     {name:'OKO - Fun Okonomiyaki Bar',type:'GF-ADAPTABLE',price:'~700-1.200¥ (~4-7€)',desc:'Okonomiyaki + takoyaki GF. Menú vegetariano todo sin gluten. Controlan contaminación cruzada. Higashishinsaibashi, corazón de Dotonbori.',area:'Shinsaibashi',lat:34.6695,lng:135.5040},
      {name:'Kizu Market sashimi (fresco y GF)',type:'Sashimi GF',price:'~800¥ (~4€)',desc:'Sashimi de lonja sin soja = 100% GF. Llevar tamari. El marisco fresco es la opción más segura del mercado.',area:'Daikokucho',lat:34.6590,lng:135.5010},
    ]},
    cena:{spots:[
@@ -2603,8 +2607,10 @@ const DAY_ALERTS = {
       '📋 PRE-VIAJE: Contratar seguro de viaje',
       '📋 PRE-VIAJE: Llevar tamari sin gluten (sachets San-J) desde casa',
       '📋 PRE-VIAJE: Cargar Suica/Pasmo en el móvil o comprar IC card en Narita'],
-  2: ['🎭 KABUKI: Kabukiza (Ginza) — "Michiyuki Tabiji no Hanamuko". MATINÉE 3er acto: 15:03-15:42. Makumi: ¥5.800 (2ª planta) o ¥1.600 (4ª, 90 asientos). Si matinée completa (11:00-15:42): Yanesen 7:30-10:00, saltad Koenji. Si solo acto suelto: Yanesen mañana → Kabukiza 14:30 → Lion noche.'],
-  3: ['🌿 Hamarikyu cierra 17:00 (última entrada 16:30) — id a las 15:00-15:30 para disfrutarlo con calma antes del ferry',
+  2: ['🎭 KABUKI: Kabukiza (Ginza) — "Michiyuki Tabiji no Hanamuko". MATINÉE 3er acto: 15:03-15:42. Makumi: ¥5.800 (2ª planta) o ¥1.600 (4ª, 90 asientos). Si matinée completa (11:00-15:42): Yanesen 7:30-10:00, saltad Koenji. Si solo acto suelto: Yanesen mañana → Kabukiza 14:30 → Lion noche.',
+      '🛒 BIO-RAL cerca: PARCO-ya Ueno (3F) — super de productos naturales/GF. Donuts y galletas de harina de arroz, snacks sin gluten. Muy cerca de Yanesen. Horario: 10:00-21:00.'],
+  3: ['🛒 BIO-RAL cerca: Shimokitazawa (junto a la estación) — super de productos naturales/GF. Donuts y galletas de harina de arroz, snacks sin gluten. Parada perfecta mientras exploráis el barrio. 10:00-21:00.',
+      '🌿 Hamarikyu cierra 17:00 (última entrada 16:30) — id a las 15:00-15:30 para disfrutarlo con calma antes del ferry',
       '⛴️ Ferry Sumida: último ferry ~16:30-17:00, consultad horarios (suijobus.co.jp). Al atardecer es espectacular.',
       '🌙 Senso-ji abierto 24h (exterior). Iluminado de noche sin gente — vale la pena aunque sea lunes.'],
   4: ['🕐 Check-in GuestHouse Guu: 15:00–21:00',
@@ -2634,8 +2640,10 @@ const DAY_ALERTS = {
        '🧳 Consigna SLOW HOUSE: solo 10:00–13:00',
        '📋 Mañana último día Kyoto: devolved bicis Fujitaya antes de check-out'],
   13: ['🕐 Check-in PG Kuromon: 15:00–17:00 · ⚠️ Ventana de 2h — contactad día anterior',
-       '📞 Front desk PG Kuromon: solo 10:00–17:00'],
-  14: ['📋 Comprad Kansai Area Pass si no lo tenéis (2 días, 4.800¥ — cubre trenes D14+D15 y Haruka Express a KIX)'],
+       '📞 Front desk PG Kuromon: solo 10:00–17:00',
+       '🛒 BIO-RAL Osaka: 2 tiendas cerca del alojamiento con productos GF (donuts, galletas, snacks de harina de arroz). Namba Marui (なんばマルイ, Chuo-ku) · Quartz Shinsaibashi (心斎橋, B2F, 3-12-14 Minami-Senba). Ambas 10:00-21:00.'],
+  14: ['📋 Comprad Kansai Area Pass si no lo tenéis (2 días, 4.800¥ — cubre trenes D14+D15 y Haruka Express a KIX)',
+       '🛒 BIO-RAL Osaka: Namba Marui + Quartz Shinsaibashi (ruta sur) · Umekita うめきた (junto a Osaka Station, ruta norte/Hanshin). Productos GF para llevar al avión mañana.'],
   15: ['✈️ Vuelo KIX 16:30 — salid de Osaka con margen: Haruka Express ~70 min al aeropuerto',
        '📋 Check-out PG Kuromon antes de las 10:00 · Consigna 10:00–16:00 si necesitáis',
        '📋 Compras de última hora: Tenjinbashisuji por la mañana (arcade 2.6 km)'],
@@ -5193,17 +5201,33 @@ function renderHoyDashboard() {
     }
     // Extract short name from activity title
     function shortName(title) {
-      let s = title.replace(/^(~?\d{1,2}:\d{2}:\s*|Mañana|Mediodía|Tarde|Noche|Madrugada|Atardecer)[:\s]*/i, '').split('—')[0].split('(')[0].trim();
-      // Also strip leading time like "~11:00: "
-      s = s.replace(/^~?\d{1,2}:\d{2}\s*/, '');
+      // Strip time-of-day prefixes (including compound like "Mañana-Mediodía:", "Noche tardía:")
+      let s = title.replace(/^(?:(?:Mañana|Mediodía|Tarde|Noche|Madrugada|Atardecer|temprano|early)[\s-]*)+(?:tardía)?[:\s]*/i, '').trim();
+      // Also strip leading clock times like "~11:00: "
+      s = s.replace(/^~?\d{1,2}:\d{2}[:\s]*/g, '');
+      // Take first segment before — or (
+      s = s.split('—')[0].split('(')[0].trim();
+      // Strip trailing "+" and connectors
+      s = s.replace(/\s*\+\s*.*$/, '');
       return s;
     }
 
     // Build mini-map stops
-    const stopNames = acts.slice(0, 5).map((a, i) => ({
-      name: shortName(a.title).substring(0, 14),
-      state: getActState(i)
-    }));
+    const stopNames = acts.slice(0, 5).map((a, i) => {
+      let nm = shortName(a.title)
+        .replace(/^(temprano|mañana|mediodía|tarde|noche|early)[:\s]*/i, '')
+        .replace(/^(paseo por|visita a|zona de|barrio de|vuelta por)\s+/i, '')
+        .trim();
+      // Truncate at word or hyphen boundary, max 13 chars
+      if (nm.length > 13) {
+        let cut = nm.lastIndexOf(' ', 13);
+        const hcut = nm.lastIndexOf('-', 13);
+        if (hcut > cut) cut = hcut;
+        nm = cut > 3 ? nm.substring(0, cut) : nm.substring(0, 13);
+      }
+      nm = nm.replace(/[-–—:,\s]+$/, '');
+      return { name: nm, state: getActState(i) };
+    });
     const nowIdx = stopNames.findIndex(s => s.state === 'now');
     const futureCount = stopNames.filter(s => s.state === 'future').length;
 
@@ -5327,13 +5351,16 @@ function renderHoyDashboard() {
         <div class="hoy-mini-map-bg"></div>
         <div class="hoy-mini-map-label">Ruta de hoy</div>
         <div class="hoy-map-route">
-          ${stopNames.map((s, i) => `
+          ${stopNames.map((s, i) => {
+            const edge = i === 0 ? ' pos-first' : (i === stopNames.length - 1 ? ' pos-last' : '');
+            const vpos = i % 2 === 0 ? 'pos-below' : 'pos-above';
+            return `
             ${i > 0 ? `<div class="hoy-map-line ${s.state === 'done' ? 'done' : (stopNames[i-1]?.state === 'done' && s.state === 'now' ? 'active' : '')}"></div>` : ''}
             <div class="hoy-map-stop">
               <div class="hoy-map-dot ${s.state}"></div>
-              <div class="hoy-map-stop-name ${s.state === 'now' ? 'now' : ''}">${s.name}</div>
-            </div>
-          `).join('')}
+              <div class="hoy-map-stop-name ${s.state === 'now' ? 'now' : ''} ${vpos}${edge}">${s.name}</div>
+            </div>`;
+          }).join('')}
         </div>
         <div class="hoy-map-footer">
           <div class="hoy-map-eta">⏱ ${futureCount} parada${futureCount !== 1 ? 's' : ''} restante${futureCount !== 1 ? 's' : ''}</div>
