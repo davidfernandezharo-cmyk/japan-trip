@@ -481,8 +481,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 .expense-list{margin-top:1rem}
 .expense-item{
-  display:flex;align-items:center;gap:.5rem;padding:8px 10px;
+  display:flex;align-items:center;gap:.4rem .5rem;padding:8px 10px;
   border-bottom:1px solid var(--surface3);font-size:.82rem;flex-wrap:wrap;
+}
+.expense-note{
+  width:100%;font-size:.75rem;color:var(--text-muted);padding:2px 0 0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .expense-item:last-child{border-bottom:none}
 .expense-cat{font-size:.65rem;padding:2px 6px;border-radius:3px;background:var(--surface3);color:var(--text-muted)}
@@ -837,7 +841,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .hoy-rc.done .hoy-rc-dot{background:var(--accent-green);border-color:var(--accent-green)}
 .hoy-rc.now .hoy-rc-dot{background:var(--accent-gold);border-color:var(--accent-gold);box-shadow:0 0 6px rgba(255,212,59,.4)}
 .hoy-rc-code{
-  font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:800;
+  font-family:'Noto Sans JP','JetBrains Mono',monospace;font-size:.6rem;font-weight:800;
   color:rgba(255,255,255,.15);letter-spacing:.03em;white-space:nowrap;
 }
 .hoy-rc.done .hoy-rc-code{color:rgba(105,219,124,.5)}
@@ -891,7 +895,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 }
 .dias-rc.done .dias-rc-dot{border-color:rgba(105,219,124,.5);background:rgba(105,219,124,.5)}
 .dias-rc.now .dias-rc-dot{border-color:#ffd43b;background:#ffd43b;box-shadow:0 0 8px rgba(255,212,59,.5)}
-.dias-rc-code{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;color:rgba(255,255,255,.2)}
+.dias-rc-code{font-family:'Noto Sans JP','JetBrains Mono',monospace;font-size:.62rem;font-weight:700;color:rgba(255,255,255,.2)}
 .dias-rc-city{font-size:.55rem;font-weight:600;color:rgba(255,255,255,.1)}
 .dias-rc.now .dias-rc-code{color:#ffd43b}
 .dias-rc.done .dias-rc-code{color:rgba(105,219,124,.5)}
@@ -1192,6 +1196,22 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
   background:rgba(105,219,124,.04);border-left:2px solid rgba(105,219,124,.3);
   border-radius:0 4px 4px 0;font-size:.68rem;color:rgba(255,255,255,.5);line-height:1.4;
 }
+.resto-v2-silvia-pick{
+  border:1.5px solid rgba(255,169,77,.35);
+  box-shadow:0 0 12px rgba(255,169,77,.08);
+}
+.resto-v2-silvia-star{
+  position:absolute;top:6px;right:6px;z-index:3;
+  font-size:1rem;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+  top:auto;bottom:6px;right:6px;
+}
+.resto-v2-silvia{
+  font-size:.72rem;font-weight:800;letter-spacing:.03em;
+  color:#ffa94d;margin-bottom:6px;
+  padding:3px 8px;border-radius:5px;
+  background:rgba(255,169,77,.08);
+  display:inline-block;
+}
 .resto-v2-maps{margin-top:6px}
 .resto-v2-maps a{
   font-size:.68rem;font-weight:700;color:var(--accent-blue);
@@ -1378,6 +1398,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .cel-row-act{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .cel-row-price{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:500;color:rgba(255,255,255,.2)}
 .cel-row-nav{width:24px;height:24px;border-radius:6px;background:rgba(116,192,252,.06);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:#74c0fc;cursor:pointer;text-decoration:none}
+.cel-silvia-pick{border-left:2px solid rgba(255,169,77,.35)}
+.cel-silvia-badge{font-size:.6rem;font-weight:800;color:#ffa94d;background:rgba(255,169,77,.08);padding:1px 5px;border-radius:4px;margin-left:4px}
 
 /* Safe foods */
 .cel-safe{margin:14px 12px 0;padding:14px;border-radius:14px;background:rgba(105,219,124,.03);border:1px solid rgba(105,219,124,.05)}
@@ -1910,6 +1932,10 @@ function goOffline() {
   try { _reservations = JSON.parse(localStorage.getItem('jp-reservations') || '[]'); } catch(e) { _reservations = []; }
   _reservationsReady = true;
   setSyncStatus('offline');
+  // Render with localStorage data
+  if (typeof renderExpenses === 'function') renderExpenses();
+  if (typeof refreshCheckboxUI === 'function') refreshCheckboxUI();
+  if (typeof renderReservasInline === 'function') renderReservasInline();
 }
 
 function initFirebase() {
@@ -1933,9 +1959,25 @@ function initFirebase() {
     checksDoc = db.collection('checklist').doc('state');
     reservationsRef = db.collection('reservations');
 
-    firebase.auth().signInAnonymously().catch(err => { console.error('Auth error:', err); goOffline(); });
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) return;
+    // Auth with retry (GitHub Pages domain must be in Firebase Console > Auth > Authorized domains)
+    let _authRetries = 0;
+    function tryAuth() {
+      firebase.auth().signInAnonymously().catch(err => {
+        console.error('Auth error (attempt ' + (_authRetries+1) + '):', err);
+        _authRetries++;
+        if (_authRetries < 3) {
+          setTimeout(tryAuth, _authRetries * 2000);
+        } else {
+          console.warn('Auth failed after 3 attempts — using Firestore offline cache + localStorage');
+          // Still set up Firestore listeners — they work from IndexedDB cache even without auth
+          setupFirestoreListeners(null);
+        }
+      });
+    }
+    let _listenersActive = false;
+    function setupFirestoreListeners(user) {
+      if (_listenersActive) return;
+      _listenersActive = true;
 
       expensesRef.orderBy('createdAt', 'asc').onSnapshot({includeMetadataChanges: true}, snapshot => {
         _expenses = snapshot.docs.map(doc => ({_docId: doc.id, ...doc.data()}));
@@ -1950,6 +1992,11 @@ function initFirebase() {
       }, err => {
         console.error('Firestore listener error:', err);
         setSyncStatus('offline');
+        if (!_firestoreReady) {
+          try { _expenses = JSON.parse(localStorage.getItem('jp-expenses') || '[]'); } catch(e) { _expenses = []; }
+          _firestoreReady = true;
+          renderExpenses();
+        }
       });
 
       checksDoc.onSnapshot({includeMetadataChanges: true}, snapshot => {
@@ -1977,6 +2024,12 @@ function initFirebase() {
           _reservationsReady = true;
         }
       });
+    }
+
+    tryAuth();
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) return;
+      setupFirestoreListeners(user);
     });
   } catch(e) {
     console.warn('Firebase init error:', e.message);
@@ -2024,56 +2077,64 @@ const ACCOMMODATIONS = [
    items:[
     {name:'Wise Owl Hostels Shibuya',price:'€76 total (3 noches)',rating:'—',desc:'Hostel con restaurante/bar propio en planta baja (OWL\'s Kitchen). Zona Meguro, bien conectada por metro.',url:'https://wiseowlhostels.com/shibuya/',featured:true,lat:35.6540,lng:139.6870,
      facilities:'🚿 Baño compartido (duchas + bidé) · 🍳 Cocina compartida · 📶 WiFi gratis · 👕 Lavandería · 🔒 Taquillas con llave · 🧴 Amenities (toalla, jabón, champú) · 🏪 Bar/restaurante en planta baja (OWL\'s Kitchen) · 🔌 USB en cada cama',
-     checkin:'Check-in 16:00–23:00 · Check-out 11:00 · 🏪 Recepción: mar–sáb 13:00–22:00 · ⚠️ Fuera de horario recepción: self check-in posible'},
+     checkin:'Check-in 16:00–23:00 · Check-out 11:00 · 🏪 Recepción: mar–sáb 13:00–22:00 · ⚠️ Fuera de horario recepción: self check-in posible',
+     gym:{has:false,nearby:'TIP.X.Tokyo Shibuya (¥3.300/día, 10 min a pie) · Gold\'s Gym Shibuya (¥3.960/día) · Anytime Fitness Shibuya (solo miembros con llave de otro país)'}},
   ]},
   {id:'kawaguchiko',label:'Kawaguchiko (Fuji)',days:[4],dayLabel:'D4',nights:'1 noche',dates:'17→18 nov',color:'#74c0fc',booked:true,
    note:'📍 Funatsu, Fujikawaguchiko — a 150m de la estación, zona tranquila entre el lago Kawaguchi y la estación. Lawson y 7-Eleven cerca. 🚇 Kawaguchiko Station 2 min a pie · Retro Bus para puntos de interés del lago.',
    items:[
     {name:'GuestHouse Guu',price:'€76 (1 noche)',rating:'—',desc:'Guesthouse japonesa tradicional. Parking gratuito.',url:'https://www.booking.com/hotel/jp/guesthouse-orangecabin.html',featured:true,lat:35.5010,lng:138.7580,
      facilities:'🚿 Baño compartido · 🍳 Cocina compartida · 📶 WiFi gratis · 👕 Lavandería · 🧳 Consigna de equipaje · 🅿️ Parking gratuito (¥550/día) · 🚲 Alquiler de bicis · 🛋️ Sala común con TV · 🗻 Vistas a la montaña',
-     checkin:'Check-in 15:00–21:00 · Check-out 10:00 · 🏪 Recepción en horario de check-in'},
+     checkin:'Check-in 15:00–21:00 · Check-out 10:00 · 🏪 Recepción en horario de check-in',
+     gym:{has:false,nearby:'Zona rural junto al lago Kawaguchi — no hay gimnasios para visitantes. Alternativa: paseo/running por la orilla del lago (circuito ~13 km)'}},
   ]},
   {id:'matsumoto',label:'Matsumoto',days:[5],dayLabel:'D5',nights:'1 noche',dates:'18→19 nov',color:'#74c0fc',booked:true,
    note:'📍 Calle Jōnen (Jōsei) — barrio residencial tranquilo con tiendas de souvenirs, boutiques y cafés. Vistas al monte Jōnen. 🚇 Matsumoto Station 11 min a pie · Castillo de Matsumoto 6 min a pie.',
    items:[
     {name:'tabi-shiro',price:'€81 (1 noche)',rating:'—',desc:'Guesthouse renovada con sauna, heladería propia (gelato) y bar (vie-sáb). Vistas al monte Jōnen.',url:'https://tabi-shiro.com/en/',featured:true,lat:36.2350,lng:137.9700,
      facilities:'🚿 Baño compartido (duchas limpísimas + baño femenino con plancha pelo y cosméticos) · 🍳 Cocina compartida equipada (utensilios + condimentos + bebidas calientes gratis) · 📶 WiFi gratis · 👕 Lavadora · 🔒 Taquilla para objetos de valor · ♨️ Sauna · 🍦 Heladería · 🍺 Bar (vie-sáb) · 🛋️ Lounge amplio',
-     checkin:'Check-in 16:30–21:00 · Check-out 10:00 · 🏪 Recepción: 8:00–10:00 y 16:30–21:00 (únicos horarios para llamar también) · 📧 hello@tabi-shiro.com'},
+     checkin:'Check-in 16:30–21:00 · Check-out 10:00 · 🏪 Recepción: 8:00–10:00 y 16:30–21:00 (únicos horarios para llamar también) · 📧 hello@tabi-shiro.com',
+     gym:{has:false,nearby:'Ciudad pequeña — no hay gimnasios con pase diario para turistas. Alternativa: running por el paseo del río Metoba hasta el castillo (~3 km ida y vuelta)'}},
   ]},
   {id:'narai',label:'Narai-juku',days:[6],dayLabel:'D6',nights:'1 noche',dates:'19→20 nov',color:'#ffd43b',booked:true,
    note:'📍 Narai-juku — antigua escuela Narakawa reconvertida en complejo: hostel + panadería artesanal + tienda outdoor + sauna. A pie de la calle postal más larga del Nakasendō. 🚇 Narai Station (JR Chūō Line) 12 min a pie (1 km).',
    items:[
     {name:'yama-niwa-INN',price:'€87 (1 noche)',rating:'—',desc:'Escuela rural reconvertida en hostel de diseño. Sauna finlandesa con madera de Kiso. Panadería en planta baja.',url:'https://yama-niwa.jp/',featured:true,lat:35.9690,lng:137.8095,
      facilities:'🚿 Baño compartido · 🍳 Microondas + nevera compartidos · 📶 WiFi gratis (25+ Mbps) · 👕 Lavandería autoservicio · 🧳 Consigna · 🅿️ Parking (plazas limitadas) · ♨️ Sauna finlandesa (madera de Kiso) · 🍞 Panadería in-house (route bakery & coffee) · ❄️ AC/calefacción · ⚠️ Sin ascensor',
-     checkin:'Check-in 15:00–20:00 · Check-out 10:00 · 🏪 Recepción: 7:00–20:00 · ⚠️ Fuera de horario: entrada designada disponible'},
+     checkin:'Check-in 15:00–20:00 · Check-out 10:00 · 🏪 Recepción: 7:00–20:00 · ⚠️ Fuera de horario: entrada designada disponible',
+     gym:{has:false,nearby:'Pueblo postal rural de montaña (Nakasendo) — no hay gimnasios. Alternativa: el propio trek Narai–Yabuhara (4 km) o paseo por la calle postal'}},
   ]},
   {id:'tsumago',label:'Magome (Kiso Valley)',days:[7],dayLabel:'D7',nights:'1 noche',dates:'20→21 nov',color:'#ffd43b',booked:true,
    note:'📍 Magome-juku — pueblo postal del Nakasendō, rural y silencioso por la noche. Escuela primaria reconvertida en guesthouse. Llegada por hike desde Tsumago (final del trek). ⚠️ Supermercado cierra a las 17:00 — comprad antes. 🚌 Bus a Nakatsugawa Station ~25 min (¥800, cada hora, último bus 18:30).',
    items:[
     {name:'Magome Furusato Gakkou (Guest House Gaku)',price:'€73 (1 noche, 2 hab.)',rating:'—',desc:'Antigua escuela rural reconvertida. Experiencia única en edificio escolar japonés.',url:'https://www.tripadvisor.com/Hotel_Review-g1015944-d13947367-Reviews-Guest_House_Gaku_Magome-Nakatsugawa_Gifu_Prefecture_Tokai_Chubu.html',featured:true,lat:35.5310,lng:137.5680,
-     facilities:'🚿 Baño compartido · 🍳 Cocina compartida equipada (utensilios completos) · 📶 WiFi gratis · 👕 Lavandería autoservicio · 🧳 Consigna gratis (antes del check-in y después del check-out) · 🅿️ Parking gratuito · 🏀 Gimnasio con equipo deportivo · 🛋️ Sala común · 🚐 Shuttle gratis a 19:00 a onsen/piscina local (vuelta 21:00)',
-     checkin:'Check-in 14:00–21:00 · Check-out 12:00 · 🏪 Recepción hasta 22:00 (staff vive en el edificio, disponible 24h) · ⚠️ Puerta se cierra por la noche'},
+     facilities:'🚿 Baño compartido · 🍳 Cocina compartida equipada (utensilios completos) · 📶 WiFi gratis · 👕 Lavandería autoservicio · 🧳 Consigna gratis (antes del check-in y después del check-out) · 🅿️ Parking gratuito · 🏀 Gimnasio con equipo deportivo · 🛋️ Sala común',
+     checkin:'Check-in 14:00–21:00 · Check-out 12:00 · 🏪 Recepción hasta 22:00 (staff vive en el edificio, disponible 24h) · ⚠️ Puerta se cierra por la noche',
+     gym:{has:true,nearby:'🏀 Gimnasio en el propio alojamiento (antigua escuela reconvertida) — equipo deportivo disponible para huéspedes'}},
   ]},
   {id:'kyoto',label:'Kyoto',days:[8,9,10,11],dayLabel:'D8–11',nights:'4 noches',dates:'21→25 nov',color:'#f783ac',booked:true,
    note:'📍 Nishishichijō, Shimogyō-ku — barrio residencial tranquilo, lejos de las masas turísticas. Supermercado LIFE al lado. Dueños Masa y Suki, ambiente familiar e internacional. 🚇 JR Nishiōji Station 15 min a pie (1 parada de Kyoto Station) · 🚌 Bus #205 desde Kyoto Station a Nishiōji Nanajō.',
    items:[
     {name:'Fujitaya BnB',price:'€323 (4 noches)',rating:'4.8 TripAdvisor',desc:'Guesthouse familiar con yoga room y bike rental. #4 de 685 alojamientos especiales en Kyoto. Ambiente tranquilo, edificio negro con cartel.',url:'https://fujitayabnb.jp/',featured:true,lat:34.9875,lng:135.7400,
      facilities:'🚿 Baño compartido (duchas + bañera pública) · 🍳 Cocina compartida equipada (micro, nevera, utensilios) · 📶 WiFi gratis · 👕 Lavandería · 🧳 Consigna · 🅿️ Parking privado (¥2.000/día) · 🚲 Alquiler de bicis · 🧘 Sala de yoga · ☕ Café instantáneo gratis · ❄️ AC · ⚠️ Paredes finas',
-     checkin:'Check-in 16:00–19:00 · Check-out 10:00 · 🏪 Recepción: 9:00–19:00 · ⚠️ Llegad antes de las 19:00 · 📞 Late check-in posible avisando antes · ☎️ +81-75-925-9217'},
+     checkin:'Check-in 16:00–19:00 · Check-out 10:00 · 🏪 Recepción: 9:00–19:00 · ⚠️ Llegad antes de las 19:00 · 📞 Late check-in posible avisando antes · ☎️ +81-75-925-9217',
+     gym:{has:false,nearby:'Anytime Fitness Shijo Kawaramachi (¥2.500/día — acepta turistas en horario staff 10–19h) · Gold\'s Gym Kyoto Karasuma (¥2.860/día) — ambos a ~20 min en bus desde el BnB'}},
   ]},
   {id:'nara',label:'Nara',days:[12],dayLabel:'D12',nights:'1 noche',dates:'25→26 nov',color:'#66d9e8',booked:true,
    note:'📍 Kamisanjō-chō — callejón residencial tranquilo junto a calle comercial, en el corazón de Naramachi. A 300m del Parque de Nara. 🚇 Kintetsu-Nara Station 500m (5-7 min a pie) · JR Nara Station 1.1 km (15 min a pie). ⚠️ La entrada es fácil de pasar de largo — seguid el mapa que os mandan.',
    items:[
     {name:'SLOW HOUSE NARA',price:'€67 (1 noche)',rating:'—',desc:'Guesthouse íntima de 8 habitaciones en Naramachi.',url:'https://www.booking.com/hotel/jp/slow-house-nara-surohausunai-liang-nai-liang-shi.en-gb.html',featured:true,lat:34.6815,lng:135.8270,
      facilities:'🛁 Baño privado en habitación (compacto pero funcional) — todas las habs. del SLOW HOUSE tienen baño en suite · 🍳 Cocina compartida (pequeña, horario limitado para fogones) · 📶 WiFi gratis · 🧳 Consigna de equipaje (10:00–13:00) · 🚲 Alquiler de bicicletas · 🧴 Amenities (toalla, cepillo, secador) · ❄️ Aire acondicionado · ⚠️ Sin TV ni nevera en hab. · ⚠️ Poned equipaje sobre esterilla protectora (suelo de tatami)',
-     checkin:'Check-in 16:00–20:00 · Check-out 10:00 · ⚠️ Llegad antes de las 20:00 (estricto) · 🏪 Recepción solo en horario check-in · 🧳 Consigna: 10:00–13:00 (dejad equipaje si llegáis antes)'},
+     checkin:'Check-in 16:00–20:00 · Check-out 10:00 · ⚠️ Llegad antes de las 20:00 (estricto) · 🏪 Recepción solo en horario check-in · 🧳 Consigna: 10:00–13:00 (dejad equipaje si llegáis antes)',
+     gym:{has:false,nearby:'Ciudad pequeña, sin gimnasios con pase de día para turistas. Alternativa: running por Nara Park (~5 km circuito entre ciervos y templos)'}},
   ]},
   {id:'osaka',label:'Osaka',days:[13,14],dayLabel:'D13–14',nights:'2 noches',dates:'26→28 nov',color:'#ff6b6b',booked:true,
    note:'📍 Kōzu, Chūō-ku — zona residencial tranquila. Kuromon Market a 270m, Dōtonbori a 710m, Namba a 10 min a pie. Konbinis y bakeries cerca. 🚇 Nippombashi Station (Sakaisuji + Sennichimae lines) 5 min a pie · Kintetsu-Nippombashi también 5 min.',
    items:[
     {name:'PG Kuromon',price:'€90 (2 noches)',rating:'—',desc:'Apartamento privado completo renovado en 2025.',url:'https://us.trip.com/hotels/osaka-hotel-detail-7138508/pg-kuromon/',featured:true,lat:34.6630,lng:135.5070,
      facilities:'🛁 Baño privado con bañera profunda + ducha separada · 🍳 Cocina privada completa (fogones + microondas + nevera) · 📶 WiFi gratis · 🔐 Self check-in/check-out (doble cerradura) · 🛗 Ascensor · ⚠️ Sin desayuno ni restaurante · ⚠️ Consigna solo 10:00–16:00',
-     checkin:'Check-in 15:00–17:00 · Check-out 10:00 · ⚠️ Ventana de check-in corta (2h) · 🏪 Front desk: lun–dom 10:00–17:00 · ⚠️ Contactar el día anterior para instrucciones de acceso · 🗣️ Staff habla EN + ZH + KO'},
+     checkin:'Check-in 15:00–17:00 · Check-out 10:00 · ⚠️ Ventana de check-in corta (2h) · 🏪 Front desk: lun–dom 10:00–17:00 · ⚠️ Contactar el día anterior para instrucciones de acceso · 🗣️ Staff habla EN + ZH + KO',
+     gym:{has:false,nearby:'Naniwa Sports Center (¥700/día — gimnasio público, 15 min a pie) · Urban Fit 24 Namba (¥2.530/día, 10 min a pie) · Gold\'s Gym Shinsaibashi (¥2.860/día, piscina+sauna)'}},
   ]},
 ];
 
@@ -2087,11 +2148,11 @@ const GF_RESTAURANTS = [
   {city:'matsumoto',name:'Soba Takagi',type:'CON CUIDADO',desc:'Juwari soba (100% alforfón), pero salsas con soja. Llevar tamari.',lat:36.2335,lng:137.9695},
   {city:'kyoto',name:'Gion Soy Milk Ramen UNO YUKIKO',type:'100% GF',desc:'Único ramen 100% GF de Japón. Fideos de arroz + leche de soja. Vegano. Gion, Higashiyama-ku. 4 locales en Kyoto (Gion, Sanjo, Kyoto Station, Umekoji).',lat:35.0050,lng:135.7750},
   {city:'kyoto',name:'Cafe & Bar Maru',type:'100% GF',desc:'El dueño ES CELÍACO. Tonkatsu GF. La máxima garantía.',lat:34.9960,lng:135.7580},
-  {city:'kyoto',name:'Kikyo Sushi',type:'CELIAC-AWARE',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten.',lat:35.0070,lng:135.7640},
+  {city:'kyoto',name:'Kikyo Sushi',type:'CELIAC-AWARE',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten.',lat:35.0070,lng:135.7640,silvia:true},
   {city:'kyoto',name:'Teppan Tavern Tenamonya',type:'MENÚ GF',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF.',lat:35.0040,lng:135.7760},
   {city:'kyoto',name:'Vermillion Cafe',type:'Opciones GF',desc:'Junto a Fushimi Inari. Hummus, café, postres GF.',lat:34.9670,lng:135.7720},
-  {city:'kyoto',name:'Koma Gallery Cafe',type:'100% GF',desc:'Café-galería 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. 10-19h, cerrado mar.',lat:34.999,lng:135.779},
-  {city:'kyoto',name:'Miyako Takoyaki',type:'100% GF',desc:'Takoyaki de harina de arroz integral 100% GF. 4 min de Gion-Shijo. Tominaga-cho, Higashiyama. 11-22h.',lat:35.0030,lng:135.7720},
+  {city:'kyoto',name:'Koma Gallery Cafe',type:'100% GF',desc:'Café-galería 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. 10-19h, cerrado mar.',lat:34.999,lng:135.779,silvia:true},
+  {city:'kyoto',name:'Miyako Takoyaki',type:'100% GF',desc:'Takoyaki de harina de arroz integral 100% GF. 4 min de Gion-Shijo. Tominaga-cho, Higashiyama. 11-22h.',lat:35.0030,lng:135.7720,silvia:true},
   {city:'kyoto',name:'Waco Crepes',type:'100% GF',desc:'Puesto de crepes 100% GF (dulces y saladas). Productos GF para llevar. Miyagawa-suji, 8 min de Gion-Shijo. 11-17:30.',lat:35.0020,lng:135.7710},
   {city:'kyoto',name:'GF Deli Al Camino',type:'100% GF',desc:'Pizza al horno de leña + sándwiches 100% GF. Mibubōjōchō, Nakagyo. Tel: 075-823-2626.',lat:35.0050,lng:135.7440},
   {city:'osaka',name:'Osaka Engine Ramen',type:'GF-ADAPTABLE',desc:'Todo el menú puede ser GF. Controlan contaminación cruzada. Azuchi-machi, Chuo-ku. ~¥2.500.',lat:34.6841,lng:135.5062},
@@ -2126,9 +2187,7 @@ const DAILY_EATS = [
      {name:'Tachinomi Shimbashi Gado-shita',type:'Tachinomi',price:'~800¥ (~4€)',desc:'Bajo las vías del tren en Shimbashi. Yakitori, cerveza de barril, oficinistas. El Japón real a 10 min de Ginza.',area:'Shimbashi',lat:35.6660,lng:139.7580,gfNote:'Edamame, sashimi si hay = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Llevar tamari.'},
      {name:'Ramen en Nakameguro/Shibuya',type:'Ramen',price:'~1.000¥ (~5€)',desc:'Decenas de opciones a 10 min a pie del hostel. Nakameguro tiene ramenya de barrio sin colas. Primer ramen del viaje.',area:'Nakameguro',lat:35.6442,lng:139.6988,gfNote:'❌ Ramen: fideos de trigo + caldo con soja. No apto. Ver opciones GF.'},
      {name:'Izakayas en Dogenzaka/Shibuya',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'La zona del hostel está llena de izakayas baratas. No os compliquéis la primera noche — lo que pille.',area:'Shibuya',lat:35.6580,lng:139.6982,gfNote:'Edamame, sashimi, arroz = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Llevar tamari.'},
-   ],gf:[
-     {name:'Afuri (Harajuku/Shibuya)',type:'Ramen',price:'~1.100¥ (~6€)',desc:'Ramen yuzu-shio con fideos de konnyaku (konjac) como opción GF. Avisar al pedir: confirmar caldo sin soja de trigo.',area:'Shibuya/Harajuku',lat:35.6625,lng:139.7050},
-   ]}},
+   ],gf:[]}},
 
   // ============ DÍA 2 ============
   {day:2,date:'Dom 15 nov',loc:'Tokio',color:'#b197fc',
@@ -2136,7 +2195,7 @@ const DAILY_EATS = [
    seasonal:'🎌 Hoy Shichi-Go-San — ambiente festivo en templos.',
    comida:{spots:[
      {name:'Kayaba Coffee',type:'Kissaten',price:'~900¥ (~5€)',desc:'Kissaten de 1938 en esquina de madera. Sandwich de huevo y café de sifón. Icono de Yanaka. Brunch perfecto.',area:'Yanaka',lat:35.7220,lng:139.7690,gfNote:'El café es GF. Sandwich no (pan de trigo). Pedir solo bebida.'},
-     {name:'Menchi-katsu en Yanaka Ginza',type:'Street food',price:'~250¥ (~1€)',desc:'Croqueta de carne frita en la shotengai de Yanaka. Senbei (galletas de arroz) artesanales en varios puestos.',area:'Yanaka Ginza',lat:35.7268,lng:139.7632,gfNote:'⚠️ Menchi-katsu tiene rebozado de trigo. Senbei de arroz SÍ son GF.'},
+     {name:'Menchi-katsu en Yanaka Ginza',type:'Street food',price:'~250¥ (~1€)',desc:'Croqueta de carne frita en la shotengai de Yanaka. Senbei (galletas de arroz) artesanales en varios puestos.',area:'Yanaka Ginza',lat:35.7268,lng:139.7632,gfNote:'⚠️ Menchi-katsu tiene rebozado de trigo. ⚠️ Senbei: pueden llevar salsa de soja con trigo. Preguntar siempre ingredientes.'},
      {name:'Torikizoku',type:'Yakitori',price:'~350¥/plato',desc:'Cadena yakitori donde TODO cuesta 350¥: cerveza, brochetas, edamame, arroz. Hack mochilero definitivo.',area:'Koenji / Shibuya (varias)',lat:35.6590,lng:139.7005,gfNote:'⚠️ Yakitori shio: pedir "shio dake, shoyu nashi" (parrilla puede estar contaminada). Edamame + arroz + sashimi = comida GF segura. Evitar tare.'},
      {name:'Sushi Katsura',type:'Sushi',price:'~850-1.050¥ (~5-6€)',desc:'Sushi omakase de barra en Tsukiji. Menú almuerzo 850-1.050¥ (8 piezas). Pescado del mercado a 200m. Si bajáis a Ginza/Tsukiji antes del Kabuki.',area:'Tsukiji',lat:35.6654,lng:139.7707,gfNote:'🟢 Nigirizushi es GF. Pedir con tamari propio en vez de soja. Evitar salsas extras.'},
    ],gf:[
@@ -2145,6 +2204,8 @@ const DAILY_EATS = [
    cena:{spots:[
      {name:'Fuunji',type:'Ramen',price:'~1.000¥ (~5€)',desc:'Tsukemen de culto en Shinjuku. Cola constante, vale cada minuto. Caldo dashi ultra-concentrado, fideos gruesos fríos.',area:'Shinjuku Sur',lat:35.6887,lng:139.6988,gfNote:'❌ No apto. Fideos de trigo + caldo con soja.'},
      {name:'Meikyoku Kissa Lion + cena rápida',type:'Izakaya',price:'~1.500¥ (~8€)',desc:'Tras la sesión en el kissaten de escucha, izakayas baratas por toda la zona de Dogenzaka/Shibuya.',area:'Shibuya',lat:35.6595,lng:139.6982,gfNote:'Depende del izakaya. Sashimi, edamame, arroz = seguros. ⚠️ Yakitori: pedir "shio dake, shoyu nashi".'},
+     {name:'Uobei Shibuya Dogenzaka',type:'Sushi (kaiten)',price:'~130¥/plato (~0.7€)',desc:'Kaitenzushi con pantalla táctil y tren bala que trae los platos. Ultra-barato, divertido, sin esperas. Abierto hasta 01:00.',area:'Shibuya',lat:35.6590,lng:139.6975,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. ⚠️ Evitar piezas con salsas, tempura rolls.',silvia:true},
+     {name:'Kura Sushi Shibuya Ekimae',type:'Sushi (kaiten)',price:'~115¥/plato (~0.6€)',desc:'Cadena kaitenzushi premium. Pantalla táctil, cápsula del tiempo tras 5 platos. Ingredientes sin colorantes ni conservantes.',area:'Shibuya',lat:35.6592,lng:139.7005,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. ⚠️ Evitar piezas con salsas.',silvia:true},
    ],gf:[
      {name:"GF T's Kitchen",type:'100% GF · CERTIFICADO',price:'~1.200¥ (~7€)',desc:'Si no fuisteis a mediodía. Sucursal Ueno cierra a las 20:30.',area:'Ueno / Roppongi',lat:35.6628,lng:139.7310},
    ]}},
@@ -2156,6 +2217,7 @@ const DAILY_EATS = [
    comida:{spots:[
      {name:'Shirube',type:'Curry',price:'~900¥ (~5€)',desc:'Curry japonés casero en local diminuto de Shimokitazawa. Especias propias, arroz perfecto. Cola a mediodía.',area:'Shimokitazawa',lat:35.6612,lng:139.6690,gfNote:'⚠️ Curry japonés lleva roux con harina de trigo. No apto.'},
      {name:'Bazaar Shimokitazawa',type:'Street food',price:'~500-800¥ (~3-4€)',desc:'Mercado de puestos callejeros bajo las vías del tren. Kebabs, gyoza, takoyaki. Ambiente festival.',area:'Shimokitazawa',lat:35.6615,lng:139.6695,gfNote:'Buscar puestos de yakitori shio o onigiri. El resto lleva trigo.'},
+     {name:'Kitade Tacos',type:'Tacos',price:'~1.000¥ (~5€)',desc:'Taquería artesanal en Shimokitazawa. Tortillas de maíz hechas a mano, rellenos japoneses-mexicanos. Local pequeño, muy popular.',area:'Shimokitazawa',lat:35.6608,lng:139.6684,gfNote:'⚠️ Tortilla de maíz = GF en teoría, pero confirmar que no mezclan harina de trigo. Preguntar.'},
    ],gf:[
      {name:'Atomiyosowaka (Kuramae)',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Café 100% plant-based y GF en Kuramae. Parada en el camino hacia Hamarikyu/Asakusa.',area:'Kuramae',lat:35.7000,lng:139.7930},
    ]},
@@ -2183,6 +2245,7 @@ const DAILY_EATS = [
    cena:{spots:[
      {name:'Sanrokuen',type:'Yakiniku',price:'~1.800¥ (~10€)',desc:'Yakiniku (barbacoa japonesa) con carne de Koshu. Vista al lago. Carne a la parrilla personal.',area:'Lago Kawaguchi',lat:35.5140,lng:138.7535,gfNote:'🟢 Carne a la parrilla es GF. Pedir sal en vez de tare (soja).'},
      {name:'Lake Bake',type:'Panadería/Café',price:'~800¥ (~4€)',desc:'Café-panadería junto al lago con pizzas artesanales y tartas. Terraza con vista al Fuji al atardecer.',area:'Lago Kawaguchi',lat:35.5160,lng:138.7520,gfNote:'⚠️ Pan y pizza llevan trigo. El café es GF.'},
+     {name:'Shaw\'s Sushi Bar',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sushi bar en Kawaguchiko. Pescado local del lago + producto de Tsukiji. Buena opción si os apetece sushi frente al Fuji.',area:'Kawaguchiko',lat:35.5078,lng:138.7575,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. ⚠️ Confirmar opciones GF al reservar.',silvia:true},
    ],gf:[
      {name:'Opción segura: konbini + onigiri',type:'Alternativa GF',price:'~500¥ (~3€)',desc:'FamilyMart/7-Eleven junto a la estación. Onigiri, sashimi pack, edamame.',area:'Kawaguchiko',lat:35.5020,lng:138.7650},
      {name:'Sanrokuen (shio yakiniku)',type:'Yakiniku GF',price:'~1.800¥ (~10€)',desc:'Si no comisteis aquí a mediodía. Carne + sal + arroz = cena GF segura. Evitar tare.',area:'Lago Kawaguchi',lat:35.5140,lng:138.7535},
@@ -2203,6 +2266,7 @@ const DAILY_EATS = [
    cena:{spots:[
      {name:'Matsumoto Brewery Taproom',type:'Craft beer',price:'~1.500¥ (~8€)',desc:'Taproom en un kura blanquinegro reconvertido. 4-5 cervezas locales + snacks. Castillo iluminado a 5 min.',area:'Nakamachi',lat:36.2358,lng:137.9678,gfNote:'🟢 Cerveza es GF (la mayoría). Preguntar por snacks sin trigo.'},
      {name:'Bacca Brewing',type:'Craft beer',price:'~1.500¥ (~8€)',desc:'Microcervecería experimental junto al castillo. IPAs, stouts. Terraza.',area:'Marunouchi',lat:36.2380,lng:137.9696,gfNote:'🟢 Cerveza es GF. Snacks pueden tener trigo — preguntar.'},
+     {name:'Sushiten',type:'Sushi tradicional',price:'~4.000-6.000¥ (~25-35€)',desc:'Sushi de barra tradicional en Matsumoto. Experiencia auténtica a precio razonable comparado con Kyoto/Osaka. ☎️ +81 263-32-4313 para reservar y preguntar opciones GF.',area:'Centro Matsumoto',lat:36.2340,lng:137.9690,gfNote:'⚠️ Llamar antes: preguntar si tienen tamari (soja sin trigo) o si podéis llevar el vuestro. Nigirizushi sobre arroz es naturalmente GF.',silvia:true},
    ],gf:[
      {name:'Temariya',type:'100% GF',price:'~800¥ (~4€)',desc:'Baumkuchen 100% harina de arroz. "The best in the world". Más postre/snack que cena, pero combinable.',area:'Centro',lat:36.2375,lng:137.9715},
      {name:'Soba Takagi (juwari soba)',type:'CON CUIDADO',price:'~1.000¥ (~5€)',desc:'100% alforfón = GF. Pedir juwari soba + tamari propio en vez de tsuyu. Confirmar al pedir.',area:'Matsumoto',lat:36.2335,lng:137.9695},
@@ -2266,24 +2330,24 @@ const DAILY_EATS = [
 
   // ============ DÍA 9 ============
   {day:9,date:'Dom 22 nov',loc:'Kyoto',color:'#f783ac',
-   note:'Día intenso: Tofuku-ji → Fushimi Inari → sake → Eikando. Comed donde estéis.',
+   note:'Tofuku-ji → Fushimi Inari → Higashiyama → Eikando. Comed donde estéis.',
    seasonal:'🍶 Hiyaoroshi: sake de otoño. 🍂 Pico absoluto del koyo. Oden callejero.',
    comida:{spots:[
      {name:'Vermillion Cafe',type:'Café',price:'~800¥ (~4€)',desc:'Junto a Fushimi Inari. Hummus, café, postres. Terraza con vistas a los torii.',area:'Fushimi Inari',lat:34.9670,lng:135.7720,gfNote:'🟢 Opciones GF marcadas en carta. Hummus, ensaladas.'},
      {name:'Gekkeikan + Torizou',type:'Sake + izakaya',price:'~1.500¥ (~8€)',desc:'Cata en Gekkeikan Museum (600¥, incluye sake) + yakitori en Torizou. Fushimi = la meca del sake.',area:'Fushimi',lat:34.9300,lng:135.7580,gfNote:'Sake puro es GF. ⚠️ Yakitori: pedir "shio dake, shoyu nashi". Mejor opción GF: sashimi + arroz.'},
    ],gf:[
      {name:'Vermillion Cafe',type:'Opciones GF',price:'~800¥ (~4€)',desc:'Opciones GF marcadas en la carta. Junto a Fushimi Inari.',area:'Fushimi Inari',lat:34.9670,lng:135.7720},
-     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral. 4 min Gion-Shijo. Snack fácil entre Fushimi y Higashiyama. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720},
+     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral. 4 min Gion-Shijo. Snack fácil entre Fushimi y Higashiyama. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720,silvia:true},
    ]},
    cena:{spots:[
      {name:'Sugari',type:'Ramen',price:'~1.200¥ (~7€)',desc:'Ramen de wagyu y menudencias en una machiya renovada. Sabor profundo, ambiente zen. Michelin.',area:'Karasuma',lat:35.0080,lng:135.7590,gfNote:'❌ Fideos de trigo + caldo con soja.'},
-     {name:'Chidoritei',type:'Sushi',price:'~1.800¥ (~10€)',desc:'Sushi familiar 3ª generación. Saba-zushi (caballa marinada al estilo Kyoto). 8 asientos.',area:'Gion',lat:35.0032,lng:135.7748,gfNote:'🟢 Sushi es GF si pedís con tamari propio. ⚠️ El vinagre del arroz puede tener trigo.'},
+     {name:'Chidoritei',type:'Sushi',price:'~1.800¥ (~10€)',desc:'Sushi familiar 3ª generación. Saba-zushi (caballa marinada al estilo Kyoto). 8 asientos. ⏰ Cierra 17:00 (último pedido 16:30) — solo almuerzo.',area:'Gion',lat:35.0032,lng:135.7748,gfNote:'🟢 Sushi es GF si pedís con tamari propio. ⚠️ El vinagre del arroz puede tener trigo.',silvia:true},
      {name:'Izuu',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sabazushi (caballa prensada) desde 1781. Michelin. Mackerel curado 3 días. Para llevar también. Hanamikoji, Gion.',area:'Gion',lat:35.0035,lng:135.7745,gfNote:'🟢 Sabazushi: arroz + caballa + hoja de kombu. Naturalmente GF. Llevar tamari.'},
    ],gf:[
      {name:'Cafe & Bar Maru',type:'100% GF',price:'~1.500¥ (~8€)',desc:'El dueño ES CELÍACO. Tonkatsu GF. La máxima garantía.',area:'Karasuma',lat:34.9960,lng:135.7580},
      {name:'Teppan Tavern Tenamonya',type:'MENÚ GF',price:'~1.800¥ (~10€)',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF. Cena completa sin gluten.',area:'Gion',lat:35.0040,lng:135.7760},
-     {name:'Koma Gallery Cafe',type:'100% GF',price:'~800¥ (~4€)',desc:'Café 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. Cerrado mar.',area:'Higashiyama',lat:34.999,lng:135.779},
-     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral 100% GF. 4 min de Gion-Shijo, Tominaga-cho. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720},
+     {name:'Koma Gallery Cafe',type:'100% GF',price:'~800¥ (~4€)',desc:'Café 100% GF en Higashiyama. Dorayaki de matcha, pasteles. Cerca de Kiyomizu-dera. Cerrado mar.',area:'Higashiyama',lat:34.999,lng:135.779,silvia:true},
+     {name:'Miyako Takoyaki',type:'100% GF',price:'~500¥ (~3€)',desc:'Takoyaki de arroz integral 100% GF. 4 min de Gion-Shijo, Tominaga-cho. 11-22h.',area:'Higashiyama',lat:35.0030,lng:135.7720,silvia:true},
      {name:'Waco Crepes',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Crepes GF dulces y saladas. Miyagawa-suji, 8 min Gion-Shijo. 11-17:30.',area:'Gion',lat:35.0020,lng:135.7710},
    ]}},
 
@@ -2301,7 +2365,7 @@ const DAILY_EATS = [
      {name:'Nanaya',type:'Matcha',price:'~500¥ (~3€)',desc:'Helado matcha con 7 niveles de intensidad. Nivel 7 = el más concentrado del mundo. Siempre cola.',area:'Kawaramachi',lat:35.0058,lng:135.7680,gfNote:'🟢 Helado es GF (verificar que no tiene galleta). Solo matcha + leche.'},
      {name:'Menami',type:'Obanzai',price:'~1.500¥ (~8€)',desc:'Cocina casera de Kyoto. Si no fuisteis el Día 8, esta es la noche.',area:'Kiyamachi',lat:35.0052,lng:135.7690,gfNote:'Obanzai varía. Pedir platos sin soja.'},
    ],gf:[
-     {name:'Kikyo Sushi',type:'CELIAC-AWARE',price:'~1.500¥ (~8€)',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten en la casa.',area:'Gion',lat:35.0070,lng:135.7640},
+{name:'Kikyo Sushi',type:'CELIAC-AWARE',price:'~1.500¥ (~8€)',desc:'Sushi familiar de 60 años. TIENEN soja sin gluten en la casa.',area:'Gion',lat:35.0070,lng:135.7640,silvia:true},
      {name:'Cafe & Bar Maru',type:'100% GF',price:'~1.500¥ (~8€)',desc:'El dueño ES CELÍACO. Tonkatsu GF perfecto tras un día de trek en Kurama.',area:'Karasuma',lat:34.9960,lng:135.7580},
      {name:'GF Deli Al Camino',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Pizza al horno de leña + sándwiches 100% GF. Zona Mibubōjō, oeste de Kyoto.',area:'Nakagyo',lat:35.0050,lng:135.7440},
      {name:'Waco Crepes',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Crepes GF dulces y saladas. Miyagawa-suji, 8 min de Gion-Shijo. 11-17:30.',area:'Gion',lat:35.0020,lng:135.7710},
@@ -2317,15 +2381,16 @@ const DAILY_EATS = [
      {name:'Komichi',type:'Obanzai',price:'~1.300¥ (~7€)',desc:'Obanzai casero en un local diminuto junto a Tenryu-ji. Set de mediodía con 6-8 platitos de temporada.',area:'Tenryu-ji',lat:35.0160,lng:135.6745,gfNote:'Obanzai varía. Preguntar platos sin soja.'},
    ],gf:[
      {name:'Yudofu Sagano (naturalmente GF)',type:'Tofu GF',price:'~1.200¥ (~7€)',desc:'Tofu hervido en caldo kombu puro = la opción más segura de Arashiyama. Llevar tamari propio para la salsa.',area:'Saga-Arashiyama',lat:35.0175,lng:135.6730},
-     {name:'Onigiri de konbini + senbei',type:'Alternativa GF',price:'~400¥ (~2€)',desc:'Complemento al yudofu: onigiri + senbei de arroz. Konbini 7-Eleven junto a la estación de Arashiyama.',area:'Arashiyama',lat:35.0150,lng:135.6770},
+     {name:'Onigiri de konbini + senbei',type:'Alternativa GF',price:'~400¥ (~2€)',desc:'Complemento al yudofu: onigiri de konbini. ⚠️ Senbei: verificar ingredientes (pueden llevar soja con trigo). Konbini 7-Eleven junto a la estación de Arashiyama.',area:'Arashiyama',lat:35.0150,lng:135.6770},
    ]},
    cena:{spots:[
      {name:'Pontocho (despedida)',type:'Izakaya',price:'~2.000¥ (~11€)',desc:'Última noche en Kyoto: elige un izakaya en el callejón de Pontocho con terraza sobre el río Kamo. Farolillos, sake caliente, cierre perfecto.',area:'Pontocho',lat:35.0050,lng:135.7700,gfNote:'Izakaya varía. Sashimi, edamame, arroz son GF. ⚠️ Yakitori: pedir "shio dake, shoyu nashi".'},
-     {name:'Sushitetsu Pontocho',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sushi de barra en Pontocho. Nigiri desde 250¥/2pc. Despedida de Kyoto con sushi junto al río Kamo.',area:'Pontocho',lat:35.0048,lng:135.7697,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. Arroz puede tener vinagre con trigo — preguntar.'},
+     {name:'Sushitetsu Pontocho',type:'Sushi',price:'~2.000-3.000¥ (~12-18€)',desc:'Sushi de barra en Pontocho. Nigiri desde 250¥/2pc. Despedida de Kyoto con sushi junto al río Kamo.',area:'Pontocho',lat:35.0048,lng:135.7697,gfNote:'🟢 Nigirizushi es GF. Llevar tamari propio. Arroz puede tener vinagre con trigo — preguntar.',silvia:true},
      {name:'Sugari (si no fuisteis el D9)',type:'Ramen',price:'~1.200¥ (~7€)',desc:'Ramen de wagyu Michelin. Segunda oportunidad si no entrasteis el primer día.',area:'Karasuma',lat:35.0080,lng:135.7590,gfNote:'❌ Fideos de trigo + caldo con soja.'},
    ],gf:[
      {name:'Teppan Tavern Tenamonya',type:'MENÚ GF',price:'~1.800¥ (~10€)',desc:'Wagyu + tempura GF + gyoza GF + okonomiyaki GF. Broche perfecto.',area:'Gion',lat:35.0040,lng:135.7760},
      {name:'GF Deli Al Camino',type:'100% GF',price:'~1.200¥ (~7€)',desc:'Pizza al horno de leña + sándwiches GF. Zona Mibubōjō. Alternativa a Tenamonya.',area:'Nakagyo',lat:35.0050,lng:135.7440},
+     {name:'Cafe & Bar Maru',type:'100% GF',price:'~1.500¥ (~8€)',desc:'El dueño ES CELÍACO. Tonkatsu GF. Kiyamachi. Broche perfecto celíaco para última noche en Kyoto.',area:'Karasuma',lat:34.9960,lng:135.7580},
    ]}},
 
   // ============ DÍA 12 ============
@@ -2395,7 +2460,7 @@ const DAILY_EATS = [
    note:'Vuelo 16:30. Haruka Express 70 min. Última mañana para street food.',
    seasonal:'🍢 Última oportunidad: takoyaki, kushikatsu, yakiimo callejero.',
    comida:{spots:[
-     {name:'Tenjinbashisuji street food',type:'Street food',price:'~500¥ (~3€)',desc:'Arcade cubierto más largo de Japón (2.6 km, ~600 tiendas). Wagashi, taiyaki, takoyaki de despedida.',area:'Tenjinbashisuji',lat:34.7050,lng:135.5120,gfNote:'Buscar dango (arroz GF), yakiimo (boniato GF), senbei (arroz GF). Takoyaki tiene trigo.'},
+     {name:'Tenjinbashisuji street food',type:'Street food',price:'~500¥ (~3€)',desc:'Arcade cubierto más largo de Japón (2.6 km, ~600 tiendas). Wagashi, taiyaki, takoyaki de despedida.',area:'Tenjinbashisuji',lat:34.7050,lng:135.5120,gfNote:'Buscar dango (arroz GF), yakiimo (boniato GF), senbei (⚠️ pueden llevar soja con trigo — preguntar). Takoyaki tiene trigo.'},
      {name:'Takoyaki Wanaka',type:'Street food',price:'~600¥ (~3€)',desc:'Último takoyaki. Si no probasteis el de Namba, ahora o nunca.',area:'Namba (o Umeda)',lat:34.6680,lng:135.5015,gfNote:'❌ Masa de trigo.'},
    ],gf:[
      {name:'Comeconoco Lab',type:'100% GF',price:'~1.000¥ (~5€)',desc:'Abre por la mañana. Desayuno/brunch GF antes de ir al aeropuerto.',area:'Namba',lat:34.6810,lng:135.5010},
@@ -2433,8 +2498,8 @@ const DAYS = [
    context:'<p><strong>Shimokitazawa y la contracultura tokiota.</strong> "Shimokita" era un pueblo agrícola hasta que el tren lo conectó a Shinjuku en 1927. Su fama indie nació en los 80-90 con la explosión del teatro underground (<em>shōgekijō</em>, pequeños teatros) y los live houses. Los edificios bajos y callejones irregulares sobrevivieron porque no había interés comercial en demolerlos — irónicamente, eso los convirtió en el barrio más codiciado de Tokio para músicos y artistas.</p><p><strong>Hamarikyu Gardens</strong> (浜離宮恩賜庭園) fue el jardín privado de los shōgun Tokugawa desde 1654. Único jardín de Tokio con estanque de agua de mar (el nivel cambia con la marea). La casa de té sobre el agua (<em>Nakajima no Ochaya</em>) se reconstruyó en 1983 pero sigue la tradición del <em>kaiyūshiki teien</em>: jardín diseñado para pasear, donde cada giro revela una vista nueva cuidadosamente compuesta.</p><p><strong>El río Sumida</strong> (隅田川) fue la arteria comercial de Edo. Los almacenes de arroz (<em>kura</em>), las casas de placer del distrito de Yoshiwara y los mercados de pescado de Nihonbashi se abastecían por este río. El ferry que cogeréis sigue una ruta que llevaba existiendo siglos — los Tokugawa lo usaban para conectar Hamarikyu con el castillo de Edo. Desde el barco veréis la Tokyo Skytree (634 m, la torre más alta de Japón) junto a los almacenes de cerveza Asahi con su famosa "llama dorada" diseñada por Philippe Starck.</p><p><strong>Nonbei Yokocho</strong> (のんべい横丁, "callejón de los borrachos") es un vestigio de los mercados negros de posguerra en Shibuya. Unas 40 barracas de madera con capacidad de 2-6 personas cada una. Sobrevive porque los propietarios poseen el suelo de forma colectiva y se han resistido a vender a promotores. Cada vez que hay un incendio (el último fue en 2015), reconstruyen con los mismos materiales.</p>',
    activities:[
      {icon:'🏯',title:'Mañana-Mediodía: Shimokitazawa',detail:'Hub indie. Flash Disc Ranch (vinilos a 100¥), Disc Shop Zero (dub/dnb), City Country City (electrónica + café). Vintage, teatros, cafés. Las tiendas abren ~11:00-12:00.'},
-     {icon:'🍺',title:'Mediodía-Tarde: Sangenjaya (Sankaku Chitai)',detail:'Laberinto de callejones con bares de 4-6 asientos. Hashigo-zake (saltar de bar en bar). Yakitori a 150¥, cerveza a 300¥. Torre Carrot: mirador gratuito planta 26. Más local y barato que Golden Gai.'},
-     {icon:'🌿',title:'Tarde: Hamarikyu + ferry Sumida al atardecer',detail:'Tren a Shimbashi (10 min). Jardín Hamarikyu (~300¥): jardín de los shōgun Tokugawa con estanque de agua salada y casa de té sobre el agua (matcha + wagashi ~500¥). A las ~16:00, ferry por el río Sumida hasta Asakusa (~1.000¥, 35 min) — skyline de Tokio al atardecer. Llegas directamente a Asakusa.'},
+     {icon:'🍺',title:'Mediodía-Tarde: Sangenjaya (Sankaku Chitai)',detail:'Laberinto de callejones con bares de 4-6 asientos. Hashigo-zake (saltar de bar en bar). Yakitori a 150¥, cerveza a 300¥. Más local y barato que Golden Gai.'},
+     {icon:'🌿',title:'Tarde: Hamarikyu + ferry Sumida al atardecer',detail:'Tren a Shimbashi (10 min). Jardín Hamarikyu (~300¥): jardín de los shōgun Tokugawa con estanque de agua salada y casa de té sobre el agua (matcha + wagashi ~500¥). A las ~15:30-16:00, ferry Tokyo Cruise (¥940) desde el embarcadero dentro de Hamarikyu → vía Hinode Pier → Asakusa. Total ~45-60 min. Salidas cada 1-2h (última ~16:15). Skyline de Tokio al atardecer. Llegas directamente a Asakusa.'},
      {icon:'🌙',title:'Noche: Asakusa + Senso-ji iluminado',detail:'Senso-ji iluminado sin multitudes. Nakamise-dori cerrada pero atmosférica de noche. Cenáis algo rápido en la zona y metro de vuelta a Shibuya (~35 min).'},
      {icon:'🍺',title:'Noche tardía: Nonbei Yokocho (Shibuya)',detail:'Si os queda energía. Callejón de los borrachos junto al hostel. Farolillos de los años 40, encanto Showa. Fracción del turismo de Golden Gai.'},
    ]},
@@ -2452,9 +2517,9 @@ const DAYS = [
    highlight:'🌄 Amanecer en Chureito Pagoda + 🏯 Castillo de Matsumoto al atardecer. Dos iconos en un día.',
    context:'<p><strong>Chureito Pagoda y Matsumoto: del Japón devoto al Japón feudal.</strong> La pagoda Chureito (忠霊塔) se construyó en 1963 como memorial a los 960 ciudadanos de Fujiyoshida que murieron en las guerras del siglo XX. Pertenece al santuario Arakura Sengen, que venera a Konohanasakuya-hime desde 705 d.C. La vista de la pagoda roja con el Fuji detrás se ha convertido en la imagen más fotografiada de Japón, pero es un lugar de duelo.</p><p><strong>Matsumoto-jō</strong> (松本城, "castillo del cuervo") es uno de los 12 castillos originales de Japón — nunca fue destruido ni reconstruido. Data de 1593-1594. Su color negro no es decorativo: el señor feudal Ishikawa Kazumasa lo pintó negro porque Toyotomi Hideyoshi (su señor) usaba castillos negros, mientras que Tokugawa Ieyasu usaba blancos. Cuando los Tokugawa ganaron la guerra en 1600, varios castillos negros fueron demolidos; Matsumoto sobrevivió porque sus nuevos señores simplemente no tenían dinero para rehacerlo.</p><p>La torre tiene un <strong>sexto piso secreto</strong> que no se ve desde fuera — los pisos interiores no corresponden con los exteriores, un engaño defensivo habitual. Los suelos <em>uguisubari</em> ("suelos de ruiseñor") del castillo crujen al pisar para alertar de intrusos — los clavos se colocan para que las tablas froten contra ellos al flexar.</p><p><strong>Nawate-dōri</strong> (なわて通り) es la calle de las ranas: la rana es el símbolo del distrito porque una especie endémica de rana (<em>Kajika-gaeru</em>, rana cantarina) vivía en el río Metoba que bordea la calle. "Kaeru" (蛙) suena igual que "volver" (帰る) — comprar una rana en Nawate es desear que alguien vuelva sano.</p>',
    activities:[
-     {icon:'⛩️',title:'Madrugada: Chureito Pagoda al amanecer (~6:15)',detail:'LA foto icónica: pagoda roja con Fuji detrás al amanecer. 398 escalones. Gratis, 24h. 10 min en Fujikyu Railway (~310¥) desde Kawaguchiko. Llegar antes de las 6:00 para pillar sitio.'},
+     {icon:'⛩️',title:'Madrugada: Chureito Pagoda al amanecer (~6:15)',detail:'LA foto icónica: pagoda roja con Fuji detrás al amanecer. 398 escalones. Gratis, 24h. 10 min en Fujikyu Railway (~310¥) desde Kawaguchiko. Alternativa: taxi desde GuestHouse Guu (~10 min, ~1.500¥). Llegar antes de las 6:00 para pillar sitio.'},
      {icon:'☕',title:'Mañana: Desayuno, check-out y últimas vistas',detail:'Última vista del Fuji desde el lago. Desayuno en el hostel o café local. Check-out tranquilo — no hay prisa hasta las 11:00.'},
-     {icon:'🚌',title:'~11:00: Bus Kawaguchiko → Matsumoto',detail:'Bus directo ~3h (~15€/pp). Paisaje de montaña por los Alpes japoneses. Llegada ~14:00. Alternativa: tren vía Ōtsuki + Chuo Line (~4h, similar precio).'},
+     {icon:'🚌',title:'~11:45: Bus Kawaguchiko → Matsumoto',detail:'Bus directo 11:45→14:15 (~2.5h, ¥7.000/pp). Paisaje de montaña por los Alpes japoneses. ⭐ Horario investigado por Silvia. Alternativa: tren vía Ōtsuki + Chuo Line (~4h, similar precio).'},
      {icon:'🏯',title:'Tarde: Castillo de Matsumoto (ir directo al llegar)',detail:'⚠️ Último acceso 16:30 — id nada más dejar las mochilas. Uno de los 12 castillos originales. Negro como un cuervo, 6º piso secreto. 700¥. Después: Nawate-dori (todo temática rana) y Nakamachi-dori (kura blanquinegros). Ishii Miso: helado de miso.'},
      {icon:'🍺',title:'Noche: Ruta craft beer + castillo iluminado',detail:'Matsumoto Brewery (tap room en kura), Bacca Brewing, Old Rock. Shin-soba de cosecha nueva si encontráis sitio. De vuelta, el castillo iluminado reflejado en el foso — precioso de noche.'},
    ]},
@@ -2470,12 +2535,12 @@ const DAYS = [
    highlight:'La joya de la ruta. Caminata por la antigua ruta samurái entre bosques de cedros. 8 km, 2-3 horas. Acabáis en Magome, donde dormís.',
    context:'<p><strong>El Nakasendo entre Tsumago y Magome: caminando con los fantasmas del Japón feudal.</strong> Este tramo de 8 km es el mejor conservado del Nakasendo. El camino cruza el paso de Magome-tōge (801 m) entre bosques de <em>hinoki</em> (ciprés japonés) y <em>sugi</em> (cedro). Cada kilómetro está marcado con un <em>ichirizuka</em> (一里塚): montículos artificiales que los Tokugawa plantaron cada <em>ri</em> (~3,9 km) a lo largo de todas las Cinco Rutas para que los viajeros midieran la distancia.</p><p><strong>Tsumago-juku</strong> (妻籠宿) fue la primera estación postal protegida por ley en Japón (1968). Los habitantes decidieron "ni vender, ni alquilar, ni demoler" las casas antiguas — un pacto colectivo que mantienen hasta hoy. No hay cables eléctricos visibles, ni coches, ni máquinas expendedoras. Es el pueblo más auténticamente Edo que encontraréis en todo el viaje.</p><p><strong>Magome-juku</strong> (馬籠宿) es el pueblo natal de <strong>Shimazaki Tōson</strong> (1872-1943), uno de los grandes escritores de la era Meiji. Su novela <em>Yoake Mae</em> ("Antes del amanecer", 1929-35) narra cómo la apertura forzada de Japón al mundo destruyó estas comunidades postales — cuando el tren conectó Tokio y Kioto en 1889, las estaciones del Nakasendo perdieron su razón de existir en una generación. Es una novela sobre la globalización escrita 80 años antes de que la palabra existiera.</p><p><strong>Magome Furusato Gakkou</strong>, vuestro alojamiento, es una antigua escuela de pueblo reconvertida en guest house. Dormir en pupitres reconvertidos es parte de la experiencia rural del Kiso.</p>',
    activities:[
-     {icon:'🚃',title:'Mañana: Tren Narai → Nagiso',detail:'Tren local JR Chūō Line, ~25 min. Nagiso es la estación más cercana a Tsumago.'},
+     {icon:'🚃',title:'Mañana: Tren Narai → Nagiso',detail:'Tren local JR Chūō Line, ~60-70 min (trenes cada 2-3h — consultad horarios). ⚠️ IC cards no funcionan en este tramo, comprad billete en taquilla. Nagiso es la estación más cercana a Tsumago.'},
      {icon:'🚌',title:'Mañana: Bus/taxi Nagiso → Tsumago',detail:'Bus ~10 min (¥300) o 2.5 km andando (~30 min). Dejad las mochilas en el servicio de equipaje de Tsumago (envío a Magome, ~500¥, cierra 11:30) para caminar ligeros.'},
      {icon:'🏘️',title:'Mañana: Tsumago-juku',detail:'La primera estación postal protegida de Japón (1968). Sin cables eléctricos, sin coches, sin máquinas expendedoras. El pueblo más auténticamente Edo de la ruta.'},
      {icon:'🥾',title:'Mediodía: Trek Tsumago → Magome (8 km)',detail:'2-3h. Subida al paso de Magome-tōge (800m) por bosque de hinoki y cedro, luego bajada a Magome (600m). Cascadas, casas de té, ichirizuka (hitos Edo). Algo más duro que al revés (subida neta ~180m), pero acabáis en la puerta del alojamiento.'},
      {icon:'🏠',title:'Tarde: Check-in Guest House Gaku + Magome-juku',detail:'Check-in 14:00. Pueblo natal de Shimazaki Tōson (escritor). Casas Edo en ladera con vistas al valle. ⚠️ Comprad en el supermercado antes de las 17:00.'},
-     {icon:'♨️',title:'Noche: Shuttle gratis al onsen (19:00)',detail:'El hostel lleva en furgoneta al Kua Resort Yunofunezawa (クアリゾート湯舟沢) — complejo con onsen, piscina y sauna. 5 min en coche. Entrada ¥600 (entre semana). Vuelta a las 21:00. El baño perfecto después del hike.'},
+     {icon:'🌙',title:'Noche: Descanso en Magome',detail:'Descansad después del trek. Cena en el Guest House Gaku o izakaya local. Paseo por el pueblo al atardecer — las luces de las casas Edo son preciosas de noche.'},
    ]},
   {num:8,date:'Sáb 21 nov',location:'Magome → Kyoto',color:'#f783ac',tags:[{t:'tren entre valles',c:'nature'},{t:'primera noche en Kyoto',c:'offbeat'}],
    context:'<p><strong>De las montañas a la capital imperial.</strong> Hoy cruzáis la misma frontera que los <em>daimyō</em> cruzaban en el Nakasendo: de las montañas del centro al corazón político de Japón. El tren sigue el valle del Kiso hasta Nagoya (la cuarta ciudad de Japón, reconstruida tras la guerra) y de ahí a Kioto.</p><p><strong>Kioto</strong> (京都, "capital capital") fue la capital de Japón durante 1.074 años (794-1868). El emperador Kanmu la fundó como Heian-kyō ("capital de la paz") sobre una cuadrícula perfecta copiada de Chang\'an (la capital de la China Tang). La ciudad fue deliberadamente orientada: montañas al norte (protección), río al este (agua), llanura al sur (apertura). El feng shui dictó la ubicación de cada calle.</p><p>Kioto sobrevivió a la Segunda Guerra Mundial porque el secretario de guerra de EEUU, Henry Stimson, la eliminó de la lista de objetivos nucleares — había visitado la ciudad en su luna de miel en los años 20 y convenció a Truman de que destruir el centro cultural de Japón haría imposible la paz. Esta decisión es debatida por historiadores, pero el resultado es que Kioto es la única gran ciudad japonesa con su patrimonio premoderno intacto.</p><p><strong>Pontocho</strong> (先斗町), donde cenáis esta noche, es un callejón de 500 metros junto al río Kamo que data del siglo XVII. Era el barrio de <em>geiko</em> (geishas de Kioto) junto a Gion. Hoy los farolillos rojos siguen encendiéndose cada noche, y entre mayo y septiembre los restaurantes montan terrazas sobre el río (<em>kawadoko</em>).</p>',
@@ -2489,11 +2554,10 @@ const DAYS = [
    highlight:'Estáis en el pico absoluto del koyo en Kyoto (22-25 nov). Vamos a evitar las hordas.',
    context:'<p><strong>Kōyō: la contemplación otoñal como arte espiritual.</strong> El <em>momijigari</em> (紅葉狩り, "caza de hojas rojas") nació en la corte Heian (794-1185). Los nobles organizaban excursiones para contemplar los arces y componer poemas tanka sobre la impermanencia. El <em>Manyōshū</em> (万葉集, siglo VIII), la antología poética más antigua de Japón, contiene más de 4.500 poemas — muchos sobre otoño. La idea central es <em>mono no aware</em> (物の哀れ): la belleza agridulce de las cosas que pasan.</p><p><strong>Tōfuku-ji</strong> (東福寺) fue fundado en 1236 por el regente Kujō Michiie, que quiso crear un templo que combinara la grandeza de Tōdai-ji con la belleza de Kōfuku-ji — de ahí su nombre (Tō + Fuku). El valle de arces (<em>sengyokukan</em>) bajo el puente Tsūtenkyō tiene 2.000 árboles, muchos plantados en la era Kamakura (s. XIII). El abad prohibió plantar cerezos para que la gente viniera en otoño, no solo en primavera.</p><p><strong>Fushimi Inari Taisha</strong> (伏見稲荷大社) es el santuario shintoísta más visitado de Japón. Dedicado a Inari, el kami del arroz, la fertilidad y el comercio. Los ~10.000 torii naranjas fueron donados por empresas y particulares como agradecimiento por el éxito comercial — cada torii tiene el nombre del donante y la fecha grabados en la parte trasera. El sistema empezó en la era Edo y sigue activo: un torii pequeño cuesta ~175.000¥ (~1.100€), uno grande ~1.300.000¥.</p><p><strong>El sake de Fushimi</strong>: Fushimi es una de las tres grandes regiones cerveceras de sake de Japón (junto con Nada/Kobe e Hiroshima). Su agua es blanda (<em>fushimizu</em>), lo que produce un sake más suave y dulce que el de Nada. Gekkeikan (月桂冠) opera desde 1637 — casi 400 años de producción continua.</p>',
    activities:[
-     {icon:'🍂',title:'Mañana temprano: Tofuku-ji (6:30)',detail:'2.000 arces en un valle desde el puente Tsutenkyo. A las 6:30 casi vacío. 1.000¥. Sureste de Kyoto.'},
+     {icon:'🍂',title:'Mañana temprano: Tofuku-ji (8:30)',detail:'2.000 arces en un valle desde el puente Tsutenkyo. Abre a las 8:30 en temporada de otoño. Llegad pronto para evitar colas. 1.000¥. Sureste de Kyoto.'},
      {icon:'🗡️',title:'Mañana: Sanjūsangen-dō (1.001 Kannon)',detail:'A 10 min andando de Tōfuku-ji. 120m de nave con 1.001 estatuas doradas de Kannon (s.XII-XIII). Cada una con 1.000 brazos y expresión única. 600¥. 45 min bastan. De las cosas más impactantes de Kyoto.'},
-     {icon:'⛩️',title:'Mediodía: Fushimi Inari Taisha',detail:'Desde Tōfuku-ji, 1 parada de tren JR. Miles de torii naranjas. Gratis, 24h. Subida completa 2-3h. Clásico que merece la pena.'},
-     {icon:'🍶',title:'Tarde temprano: Fushimi sake district',detail:'Junto a Fushimi Inari. ~40 cervecerías de sake. Gekkeikan Museum (600¥, cata). Barco por el canal. Hiyaoroshi.'},
-     {icon:'🚶',title:'Tarde: Paseo por Higashiyama',detail:'De vuelta desde Fushimi, bajad en Gion-Shijo y subid a pie por Higashiyama: Ninenzaka, Sannenzaka, callejones de machiya. Explorad a vuestro ritmo antes del té.'},
+     {icon:'⛩️',title:'Mediodía: Fushimi Inari Taisha (versión corta)',detail:'Desde Tōfuku-ji, 1 parada de tren JR. Miles de torii naranjas. Gratis, 24h. Subida parcial hasta Yotsutsuji (~1-1.5h ida y vuelta): las mejores fotos y vistas de Kyoto. No hace falta subir hasta arriba.'},
+     {icon:'🚶',title:'Tarde: Paseo largo por Higashiyama',detail:'Desde Fushimi, metro/tren a Gion-Shijo (~15 min). Subid a pie por Higashiyama: Ninenzaka, Sannenzaka, callejones de machiya, tiendas de cerámica y dulces. 4 horas para explorar sin prisas antes del té.'},
      {icon:'🍵',title:'17:00 — Ceremonia del té: Flower Teahouse ✅ RESERVADO',detail:'Flower Teahouse, Higashiyama. Ceremonia tradicional de matcha + wagashi. Ya tenéis la reserva confirmada para las 17:00. Duración ~45-60 min.'},
      {icon:'✨',title:'19:00 — Cola para Eikando (iluminación nocturna)',detail:'A 15 min a pie desde Higashiyama. Llegad ~19:00 para la cola de entrada — las puertas abren a las 17:30 pero las colas bajan sobre las 19:00. Arces iluminados reflejados en estanques. 700¥. La más espectacular de Kyoto. Salida ~20:30.'},
    ]},
@@ -2503,7 +2567,7 @@ const DAYS = [
    activities:[
      {icon:'🥾',title:'Mañana: Trek Kurama → Kibune (4 km, 2h)',detail:'Eizan Railway con "túnel de arces iluminados" (Maple Tunnel). Kurama-dera: templo entre cedros. Kibune: aldea junto a un río.'},
      {icon:'♨️',title:'Mediodía: Kurama Onsen',detail:'Rotenburo con vistas a la montaña entre arces. Tattoo-friendly en zona exterior.'},
-     {icon:'🎮',title:'Tarde: Nintendo Museum (Ogura/Uji)',detail:'Museo interactivo de Nintendo, abierto desde 2024. Historia desde las hanafuda (1889) hasta Switch. Zona jugable con juegos retro gigantes. ¥3,300. Entradas por LOTERÍA online (reservar con antelación en my.nintendo.com). Eizan a Rokujizo + bus ~40 min. Alternativa si no hay entrada: Manga Museum en el centro (¥900, 50.000 mangas para leer en el césped).'},
+     {icon:'🍃',title:'Tarde libre: Kyoto a vuestro ritmo',detail:'Después del onsen, tarde libre. Opciones: paseo por el centro de Kyoto, Nishiki Market (cierra ~17:00), algún templo pendiente, o simplemente descansar en el BnB. Guardad energía para Kiyomizu de noche.'},
      {icon:'✨',title:'Noche: Iluminación Kiyomizu-dera',detail:'21-30 nov confirmado. Escenario de madera con arces iluminados. Hasta 21:30.'},
    ]},
   {num:11,date:'Mar 24 nov',location:'Kyoto: Arashiyama',color:'#f783ac',tags:[{t:'bambú al alba',c:'seasonal'},{t:'jardín zen maestro',c:'classic'},{t:'despedida de Kyoto',c:'offbeat'}],
@@ -2511,9 +2575,10 @@ const DAYS = [
    context:'<p><strong>Arashiyama: el jardín de recreo de los aristócratas Heian.</strong> Desde el siglo VIII, la nobleza de la corte imperial venía a Arashiyama (嵐山, "montaña de la tormenta") para sus excursiones de <em>momijigari</em> y <em>hanami</em>. El emperador Saga (786-842) tenía su villa de retiro aquí — sobre ella se construyó <strong>Tenryū-ji</strong> (天龍寺), el templo zen más importante de Arashiyama, fundado en 1339 por el shōgun Ashikaga Takauji para apaciguar el espíritu del emperador Go-Daigo (al que había depuesto).</p><p>El <strong>bosque de bambú</strong> (竹林の小径) es un grove de bambú mōsō (<em>Phyllostachys edulis</em>) que crece hasta 20 metros y puede ganar 90 cm al día en temporada de crecimiento. El crujido del bambú al viento fue designado uno de los "100 paisajes sonoros de Japón" por el Ministerio de Medio Ambiente. El efecto a las 7 de la mañana, sin nadie, es casi hipnótico.</p><p><strong>Gio-ji</strong> (祇王寺) es un templo diminuto con una historia devastadora. La bailarina Gio era la favorita del señor de la guerra Taira no Kiyomori (s. XII). Cuando él la abandonó por otra bailarina más joven, Gio se retiró aquí como monja. Años después, la nueva favorita fue también abandonada y vino a Gio-ji a pedir refugio — Gio la aceptó. El jardín de musgo sin flores es un homenaje a esa renuncia: la belleza sin ornamento.</p><p><strong>Otagi Nenbutsu-ji</strong> tiene 1.200 figuras de piedra (<em>rakan</em>), cada una tallada por un visitante distinto entre 1981 y 1991 bajo la dirección del escultor Kocho Nishimura. No son antiguas — son arte participativo. Cada una tiene una expresión única: hay rakan riendo, bebiendo sake, tocando la guitarra, e incluso sosteniendo un walkman.</p>',
    activities:[
      {icon:'🎋',title:'Mañana temprano: Bosque de bambú (7:00)',detail:'Id a las 7:00 — a las 9:00 es intransitable. El camino entre cañas de 20m de altura. 5-10 min sin gente temprano. Gratis.'},
-     {icon:'🍁',title:'Mañana: Tenryu-ji + Jojakko-ji',detail:'Tenryu-ji: jardín zen Patrimonio UNESCO con arces reflejados en el estanque. 500¥. Jojakko-ji: templo escondido en la colina con escalinata de arces. Menos turistas, más espectacular.'},
-     {icon:'🐒',title:'Mediodía: Togetsukyo + Monkey Park',detail:'Puente Togetsukyo con montañas de arces de fondo. Iwatayama Monkey Park: 120 macacos japoneses en libertad, panorámica de todo Kyoto desde arriba. 550¥.'},
-     {icon:'🌿',title:'Tarde: Gio-ji + Saga-Toriimoto + templos escondidos',detail:'Gio-ji: jardín de musgo y arces, silencio total (300¥). Subid a Otagi Nenbutsu-ji: 1.200 estatuas de Buda únicas entre hojas (cada una con cara distinta, algunas riendo). Saga-Toriimoto: calle preservada de casas de campo. Adashino Nenbutsu-ji: 8.000 estatuas de piedra entre arces. Todo a pie, misma zona norte de Sagano. Casi nadie llega aquí.'},
+     {icon:'🍁',title:'Mañana: Tenryu-ji (8:30)',detail:'Abre a las 8:30. Jardín zen Patrimonio UNESCO con arces reflejados en el estanque. 500¥. Está justo al lado del bambú — entráis directos.'},
+     {icon:'🐒',title:'Mañana: Togetsukyo + Monkey Park',detail:'5 min andando al sur desde Tenryu-ji. Puente Togetsukyo con montañas de arces de fondo. Iwatayama Monkey Park: 120 macacos japoneses en libertad, panorámica de todo Kyoto desde arriba. 550¥. Hacéis la zona sur primero y luego subís al norte sin volver atrás.'},
+     {icon:'⛩️',title:'Mediodía: Jojakko-ji + colina de arces',detail:'Subís al norte desde Togetsukyo (~15 min a pie). Templo escondido en la colina con escalinata de arces. Menos turistas, más espectacular que Tenryu-ji. Ya estáis en la zona norte — seguís recto hacia Gio-ji.'},
+     {icon:'🌿',title:'Tarde: Gio-ji + Saga-Toriimoto + templos escondidos',detail:'Todo en línea hacia el norte desde Jojakko-ji. Gio-ji: jardín de musgo y arces, silencio total (300¥). Saga-Toriimoto: calle preservada de casas de campo. Otagi Nenbutsu-ji: 1.200 estatuas de Buda únicas entre hojas (cada una con cara distinta, algunas riendo). Adashino Nenbutsu-ji: 8.000 estatuas de piedra entre arces. Casi nadie llega aquí.'},
      {icon:'🌙',title:'Noche: Despedida de Kyoto',detail:'Última noche en la antigua capital. Paseo por Gion al anochecer, cena de despedida en Pontocho o Kiyamachi. Mañana: Nara y luego Osaka.'},
    ]},
   {num:12,date:'Mié 25 nov',location:'Kyoto → Nara',color:'#f783ac',tags:[{t:'bici por Kyoto',c:'free'},{t:'capital antigua',c:'classic'},{t:'ciervos + kōyō',c:'nature'}],
@@ -2630,38 +2695,38 @@ const TIPS = [
 const DAY_ALERTS = {
   1: ['🕐 Check-in Wise Owl Shibuya: 16:00–23:00 · Self check-in fuera de horario recepción',
       '✈️ Aterrizáis 18:10 NRT — con inmigración + NEX llegaréis a Shibuya ~20:30. Primera noche tranquila, no os compliquéis.',
-      '🎭 ⚠️ RESERVAR HOY: Entradas Kabuki para MAÑANA (D2). "Michiyuki Tabiji no Hanamuko" — matinée 3er acto 15:03. Ticket makumi ¥5.800 (2ª) o ¥1.600 (4ª, cola). Web: kabuki-bito.jp o cola en taquilla 4º piso del Kabukiza.',
+      '🍽️ MAÑANA D2: GF T\'s Kitchen Ueno 13:00 ✅ RESERVADO. Cancelación: 3.000¥/grupo última semana. >20min tarde sin aviso = cancelación automática.',
       '📋 PRE-VIAJE: Comprar eSIM antes de salir (Ubigi/Airalo/Holafly, ~18€ 15 días)',
       '📋 PRE-VIAJE: Contratar seguro de viaje',
       '📋 PRE-VIAJE: Llevar tamari sin gluten (sachets San-J) desde casa',
       '📋 PRE-VIAJE: Cargar Suica/Pasmo en el móvil o comprar IC card en Narita'],
-  2: ['🎭 KABUKI: Kabukiza (Ginza) — "Michiyuki Tabiji no Hanamuko". MATINÉE 3er acto: 15:03-15:42. Makumi: ¥5.800 (2ª planta) o ¥1.600 (4ª, 90 asientos). Si matinée completa (11:00-15:42): Yanesen 7:30-10:00, saltad Koenji. Si solo acto suelto: Yanesen mañana → Kabukiza 14:30 → Lion noche.',
+  2: ['🍽️ GF T\'s Kitchen Ueno 13:00 ✅ RESERVADO. 2 personas, 100% sin gluten. Cancelación: 3.000¥/grupo última semana. >20min tarde sin aviso = cancelación automática.',
       '🛒 BIO-RAL cerca: PARCO-ya Ueno (3F) — super de productos naturales/GF. Donuts y galletas de harina de arroz, snacks sin gluten. Muy cerca de Yanesen. Horario: 10:00-21:00.'],
   3: ['🛒 BIO-RAL cerca: Shimokitazawa (junto a la estación) — super de productos naturales/GF. Donuts y galletas de harina de arroz, snacks sin gluten. Parada perfecta mientras exploráis el barrio. 10:00-21:00.',
       '🌿 Hamarikyu cierra 17:00 (última entrada 16:30) — id a las 15:00-15:30 para disfrutarlo con calma antes del ferry',
-      '⛴️ Ferry Sumida: último ferry ~16:30-17:00, consultad horarios (suijobus.co.jp). Al atardecer es espectacular.',
+      '⛴️ Ferry Hamarikyu→Asakusa: sale del embarcadero dentro del jardín, vía Hinode Pier (~45-60 min total, ¥940). Última salida ~16:15. Consultad horarios exactos (suijobus.co.jp). Al atardecer es espectacular.',
       '🌙 Senso-ji abierto 24h (exterior). Iluminado de noche sin gente — vale la pena aunque sea lunes.'],
   4: ['🕐 Check-in GuestHouse Guu: 15:00–21:00',
       '🎟️ Higaeri onsen con vista al Fuji: algunos piden reserva previa en temporada alta — consultad el día antes'],
   5: ['🕐 Check-in tabi-shiro: 16:30–21:00',
       '🎟️ Matsumoto Castle: entrada cronometrada posible en pico koyo — comprad ticket online si está disponible (matsumoto-castle.jp)'],
   6: ['🕐 Check-in yama-niwa-INN: 15:00–20:00 · Recepción desde 7:00'],
-  7: ['⚠️ Servicio equipaje Tsumago cierra 11:30 — enviad mochilas a Magome antes',
+  7: ['🚃 Tren Narai → Nagiso: ~60-70 min (NO 25 min). Trenes cada 2-3h — consultad horarios JR. IC cards NO funcionan, comprad billete.',
+      '⚠️ Servicio equipaje Tsumago cierra 11:30 — enviad mochilas a Magome antes',
       '🕐 Check-in Magome Gakkou: 14:00–21:00',
-      '⚠️ Supermercado Magome cierra ~17:00',
-      '🚐 Shuttle onsen: 19:00 (vuelta 21:00)'],
-  8: ['🕐 Check-in Fujitaya BnB Kyoto: 16:00–19:00 · ⚠️ Avisad si llegáis tarde',
+      '⚠️ Supermercado Magome cierra ~17:00'],
+  8: ['🧺 COLADA: Aprovechad para lavar ropa en Fujitaya BnB. Preguntad por lavadora/secadora al hacer check-in.',
+      '🕐 Check-in Fujitaya BnB Kyoto: 16:00–19:00 · ⚠️ Avisad si llegáis tarde',
       '🍵 Mañana D9: Ceremonia del té Flower Teahouse 17:00 ✅ YA RESERVADO',
       '🎟️ RECORDAR: Eikando iluminación D9 — no se puede reservar, id a la cola ~19:00 (700¥)',
-      '🍣 RESERVAS CENA D9: Llamar a Chidoritei (8 asientos, sushi familiar, Gion) y Cafe & Bar Maru (el dueño celíaco — sitio pequeño). Izuu (sabazushi) no necesita reserva pero id fuera de hora punta o comprad para llevar.'],
+      '🍣 CENA D9: Chidoritei cierra 17:00 — solo para almuerzo. Para cena: opción sencilla (konbini/kaitenzushi) o Cafe & Bar Maru (el dueño celíaco — sitio pequeño). Izuu (sabazushi) no necesita reserva pero id fuera de hora punta o comprad para llevar.'],
   9: ['🍵 Ceremonia del té: Flower Teahouse 17:00 ✅ RESERVADO · Higashiyama. Matcha + wagashi ~45-60 min.',
-      '🎟️ Tofuku-ji 6:30 AM: en pico koyo puede haber cola incluso temprano — id lo antes posible',
+      '🎟️ Tofuku-ji 8:30 AM: abre a las 8:30 en otoño. En pico koyo puede haber cola — llegad antes de las 8:30',
       '✨ Eikando iluminación: puertas 17:30, colas bajan ~19:00 · 700¥ · Arces iluminados reflejados en estanques'],
   10: ['🎌 FESTIVO: 勤労感謝の日 (Día del Trabajo) — templos y trenes más llenos de lo normal',
-       '🎮 Nintendo Museum (Ogura/Uji): ¥3.300 · Entradas por LOTERÍA online (my.nintendo.com) — reservar con antelación. Alternativa: Manga Museum centro (¥900).',
-       '♨️ Kurama Onsen: puede llenarse en festivo — id temprano (abre 10:00)',
+       '♨️ Kurama Onsen: puede llenarse en festivo — id temprano (abre 10:00). ☎️ Llamar para confirmar que abren en festivo: +81 75-741-2131',
        '🎟️ Kiyomizu-dera iluminación nocturna: consultar si hay venta anticipada (kiyomizudera.or.jp)',
-       '🍣 CENA: Kikyo Sushi (Gion, celiac-aware con soja GF) — llamar para reservar, es pequeño. Tenamonya (GF teppan) — llamar también, popular entre celíacos.'],
+       '🍣 CENA: Kikyo Sushi 19:30 ✅ RESERVADO. 2 personas, front area. Ref: G67XK3. Tel: 075-231-7361. >15min tarde sin aviso = cancelación (1.000¥/persona). Alternativa: Tenamonya (GF teppan).'],
   11: ['🎋 Arashiyama: id al bambú a las 7:00 — a las 9:00 es intransitable',
        '🍣 CENA DESPEDIDA: Sushitetsu Pontocho (sushi de barra) — intentad reservar, Pontocho se llena el martes noche con turistas de koyo. Alternativa: cualquier izakaya del callejón con terraza al río.'],
   12: ['⚠️ SLOW HOUSE NARA: Check-in 16:00–20:00 · Estricto, llegad antes de las 20:00',
@@ -2940,16 +3005,30 @@ const REGION_GROUPS = [
 ];
 
 // Route cities for the progress bar
+// Japanese city name lookup
+const CITY_JA = {
+  'Shanghai':'上海','Shanghái':'上海',
+  'Tokio':'東京','Tokyo':'東京',
+  'Fuji':'富士','Kawaguchiko':'河口湖','Kawaguchiko (Fuji)':'河口湖',
+  'Matsumoto':'松本','Matsumo.':'松本',
+  'Narai':'奈良井','Narai-juku':'奈良井宿',
+  'Magome':'馬籠','Magome (Kiso Valley)':'馬籠',
+  'Kyoto':'京都','Kioto':'京都',
+  'Nara':'奈良',
+  'Osaka':'大阪','Ōsaka':'大阪',
+  'Tsumago':'妻籠',
+};
+
 const ROUTE_CITIES = [
-  {code:'PVG', city:'Shanghai', dayRange:[0,0]},
-  {code:'TYO', city:'Tokio', dayRange:[1,3]},
-  {code:'FUJ', city:'Fuji', dayRange:[4,4]},
-  {code:'MAT', city:'Matsumo.', dayRange:[5,5]},
-  {code:'NRI', city:'Narai', dayRange:[6,6]},
-  {code:'MGM', city:'Magome', dayRange:[7,7]},
-  {code:'KYO', city:'Kyoto', dayRange:[8,11]},
-  {code:'NRA', city:'Nara', dayRange:[12,12]},
-  {code:'OSA', city:'Osaka', dayRange:[13,15]},
+  {code:'PVG', city:'Shanghai', ja:'上海', dayRange:[0,0]},
+  {code:'TYO', city:'Tokio', ja:'東京', dayRange:[1,3]},
+  {code:'FUJ', city:'Fuji', ja:'富士', dayRange:[4,4]},
+  {code:'MAT', city:'Matsumo.', ja:'松本', dayRange:[5,5]},
+  {code:'NRI', city:'Narai', ja:'奈良井', dayRange:[6,6]},
+  {code:'MGM', city:'Magome', ja:'馬籠', dayRange:[7,7]},
+  {code:'KYO', city:'Kyoto', ja:'京都', dayRange:[8,11]},
+  {code:'NRA', city:'Nara', ja:'奈良', dayRange:[12,12]},
+  {code:'OSA', city:'Osaka', ja:'大阪', dayRange:[13,15]},
 ];
 
 // Calendar dates for each day num (Nov 14=D0 through Nov 28=D15, but D0 and D1 share Nov 14)
@@ -3003,7 +3082,7 @@ function renderDiasHero() {
       if (currentDay > rc.dayRange[1]) state = 'done';
       else if (currentDay >= rc.dayRange[0] && currentDay <= rc.dayRange[1]) state = 'now';
     }
-    return `<div class="dias-rc ${state}"><div class="dias-rc-dot"></div><div class="dias-rc-code">${rc.code}</div><div class="dias-rc-city">${rc.city}</div></div>`;
+    return `<div class="dias-rc ${state}"><div class="dias-rc-dot"></div><div class="dias-rc-code">${rc.ja || rc.code}</div><div class="dias-rc-city">${rc.city}</div></div>`;
   }).join('');
 
   heroEl.innerHTML = `
@@ -3070,22 +3149,22 @@ function renderDays() {
 
       // Enhanced titles & route summaries matching V2 mockup
       const DAY_TITLES = {
-        0: 'Escala Shanghai — Bund & Yu Garden',
-        1: 'Llegada NRT → Shibuya',
-        2: 'Yanesen → Koenji → Lion',
-        3: 'Shimokita → Asakusa',
-        4: 'Kawaguchiko — Monte Fuji',
-        5: 'Kawaguchiko → Matsumoto',
-        6: 'Matsumoto → Narai-juku',
-        7: 'Trek Tsumago → Magome',
-        8: 'Magome → Kyoto',
-        9: 'Tōfuku-ji → Fushimi → Eikando',
-        10: 'Kurama → Kibune · montaña sagrada',
-        11: 'Arashiyama — bambú al alba',
-        12: 'Kyoto → Nara · capital antigua',
-        13: 'Nara → Osaka · Dōtonbori',
-        14: 'Osaka underground · día completo',
-        15: 'Osaka → ✈️ KIX · sayōnara'
+        0: 'Escala Shanghai — Bund & Yu Garden <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">上海</span>',
+        1: 'Llegada NRT → Shibuya <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">東京</span>',
+        2: 'Yanesen → Koenji → Lion <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">東京</span>',
+        3: 'Shimokita → Asakusa <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">東京</span>',
+        4: 'Kawaguchiko — Monte Fuji <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">河口湖</span>',
+        5: 'Kawaguchiko → Matsumoto <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">松本</span>',
+        6: 'Matsumoto → Narai-juku <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">奈良井宿</span>',
+        7: 'Trek Tsumago → Magome <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">妻籠 → 馬籠</span>',
+        8: 'Magome → Kyoto <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">京都</span>',
+        9: 'Tōfuku-ji → Fushimi → Eikando <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">京都</span>',
+        10: 'Kurama → Kibune · montaña sagrada <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">鞍馬 · 貴船</span>',
+        11: 'Arashiyama — bambú al alba <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">嵐山</span>',
+        12: 'Kyoto → Nara · capital antigua <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">奈良</span>',
+        13: 'Nara → Osaka · Dōtonbori <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">大阪</span>',
+        14: 'Osaka underground · día completo <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">大阪</span>',
+        15: 'Osaka → ✈️ KIX · sayōnara <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.35;font-size:.75em">さようなら</span>'
       };
       const DAY_ROUTES = {
         0: 'Maglev 431 km/h → Yu Garden → Bund → Nanjing Rd → Maglev',
@@ -3263,7 +3342,7 @@ function renderAccom() {
     'kawaguchiko': ['🅿️ Parking', '🚲 Bicis', '🗻 Vistas Fuji', '🍳 Cocina'],
     'matsumoto': ['♨️ Sauna', '🍦 Heladería', '🍳 Cocina equipada', '🍺 Bar vie-sáb'],
     'narai': ['♨️ Sauna finlandesa', '🍞 Panadería', '📶 WiFi 25+ Mbps'],
-    'tsumago': ['🏀 Gimnasio', '🚐 Shuttle onsen 19:00', '🍳 Cocina completa', '🅿️ Parking'],
+    'tsumago': ['🏀 Gimnasio', '🍳 Cocina completa', '🅿️ Parking'],
     'kyoto': ['🚲 Bicis', '🧘 Yoga room', '☕ Café gratis', '⭐ #4 Kyoto'],
     'nara': ['🛁 Baño privado', '🚲 Bicis', '🧴 Amenities'],
     'osaka': ['🛁 Bañera profunda', '🍳 Cocina privada', '🔐 Self check-in'],
@@ -3389,7 +3468,8 @@ function renderAccom() {
     const priceMatch = a.price.match(/€(\d+)/);
     const priceNum = priceMatch ? `€${priceMatch[1]}` : a.price;
     html += `<div class="aloj-name">${a.name}</div>`;
-    html += `<div class="aloj-city-label">📍 ${stay.label}</div>`;
+    const cityJa = CITY_JA[stay.label] || '';
+    html += `<div class="aloj-city-label">📍 ${stay.label}${cityJa ? ' <span style="font-family:\'Noto Sans JP\',sans-serif;opacity:.5;font-size:.72rem">' + cityJa + '</span>' : ''}</div>`;
 
     // Data grid: check-in / check-out
     html += `<div class="aloj-data">
@@ -3420,6 +3500,17 @@ function renderAccom() {
     // Full facilities
     if (a.facilities) {
       html += `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px"><strong style="color:var(--text)">Servicios:</strong> ${a.facilities}</div>`;
+    }
+
+    // Gym info
+    if (a.gym) {
+      const gymIcon = a.gym.has ? '🏋️' : '🚶';
+      const gymLabel = a.gym.has ? 'Gimnasio en el alojamiento' : 'Sin gimnasio';
+      const gymColor = a.gym.has ? 'var(--accent-green)' : 'var(--text-muted)';
+      html += `<div style="font-size:.82rem;line-height:1.6;margin-bottom:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06)">
+        <strong style="color:${gymColor}">${gymIcon} ${gymLabel}</strong><br>
+        <span style="color:var(--text-muted)">${a.gym.nearby}</span>
+      </div>`;
     }
 
     // Check-in details
@@ -3504,10 +3595,10 @@ function renderCeliac() {
 
   // Zone groupings
   const zones = [
-    {id:'tokyo', name:'Tokio', cities:['tokyo']},
-    {id:'central', name:'Zona Central', cities:['matsumoto']},
-    {id:'kyoto', name:'Kyoto', cities:['kyoto']},
-    {id:'osaka', name:'Osaka & Nara', cities:['osaka','nara']},
+    {id:'tokyo', name:'Tokio', ja:'東京', cities:['tokyo']},
+    {id:'central', name:'Zona Central', ja:'松本', cities:['matsumoto']},
+    {id:'kyoto', name:'Kyoto', ja:'京都', cities:['kyoto']},
+    {id:'osaka', name:'Osaka & Nara', ja:'大阪 · 奈良', cities:['osaka','nara']},
   ];
 
   // Type to tag mapping
@@ -3633,14 +3724,14 @@ function renderCeliac() {
   // 5. ZONE ACCORDION
   html += `<div class="cel-zones">`;
   zones.forEach(zone => {
-    const restos = GF_RESTAURANTS.filter(r => zone.cities.includes(r.city));
+    const restos = GF_RESTAURANTS.filter(r => zone.cities.includes(r.city)).sort((a, b) => (b.silvia ? 1 : 0) - (a.silvia ? 1 : 0));
     const isActive = zone.id === currentZone;
     const isOpen = isActive;
     html += `
       <div class="cel-zone">
         <div class="cel-zone-hdr" onclick="celToggleZone(this)">
           <div class="cel-zone-left">
-            <span class="cel-zone-name">${zone.name}</span>
+            <span class="cel-zone-name">${zone.name} <span style="font-family:'Noto Sans JP',sans-serif;font-weight:400;opacity:.4;font-size:.78em">${zone.ja}</span></span>
             <span class="cel-zone-count">${restos.length}</span>
             ${isActive ? '<span class="cel-zone-active">📍 Zona actual</span>' : ''}
           </div>
@@ -3652,10 +3743,10 @@ function renderCeliac() {
             const dot = getDot(r.type);
             const mapsUrl = (r.lat && r.lng) ? `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}` : '';
             return `
-              <div class="cel-row">
+              <div class="cel-row${r.silvia ? ' cel-silvia-pick' : ''}">
                 <div class="cel-dot ${dot}"></div>
                 <div class="cel-row-body">
-                  <div class="cel-row-top"><span class="cel-row-name">${r.name}</span><span class="cel-row-tag ${tag.cls}">${tag.label}</span></div>
+                  <div class="cel-row-top"><span class="cel-row-name">${r.name}</span>${r.silvia ? '<span class="cel-silvia-badge">⭐ Silvia</span>' : ''}<span class="cel-row-tag ${tag.cls}">${tag.label}</span></div>
                   <div class="cel-row-desc">${r.desc}</div>
                 </div>
                 <div class="cel-row-act">
@@ -3865,15 +3956,31 @@ function renderReservasSection(container) {
 
 function seedReservations() {
   const existing = getReservations();
-  if (existing.length > 0) return; // already has data
   const seeds = [
-    { id: 1700000001, name: 'Haginoya · nit de Magome', day: 7, time: '19:00', meal: 'Cena', note: 'Reservat. Soba + plats locals. Última nit Nakasendo.', confirmed: true, createdAt: new Date() },
+    { id: 1700000001, name: 'Haginoya · nit de Magome', day: 7, time: '19:00', meal: 'Cena', note: '4.500¥ para dos. Soba + plats locals. Última nit Nakasendo.', confirmed: true, createdAt: new Date() },
     { id: 1700000002, name: 'Flower Teahouse · Ceremonia del té', day: 9, time: '17:00', meal: 'Actividad', note: 'Reservat ✅ Matcha + wagashi, Higashiyama.', confirmed: true, createdAt: new Date() },
+    { id: 1700000003, name: 'GF T\'s Kitchen Ueno', day: 2, time: '13:00', meal: 'Comida', note: 'Reserva confirmada. 2 personas. 100% sin gluten. Cancelación: 3.000¥/grupo si cancelas en la última semana. Retraso >20min = cancelación automática.', confirmed: true, createdAt: new Date() },
+    { id: 1700000004, name: 'Kikyo Sushi', day: 10, time: '19:30', meal: 'Cena', note: 'Reserva confirmada. 2 personas. Front area. Ref: G67XK3. Tel: 075-231-7361. >15min tarde sin aviso = cancelación (1.000¥/persona).', confirmed: true, createdAt: new Date() },
   ];
-  seeds.forEach(s => _reservations.push(s));
-  try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
-  if (reservationsRef) {
-    seeds.forEach(s => reservationsRef.add(s).catch(err => console.warn('Seed write failed:', err.message)));
+  let changed = false;
+  seeds.forEach(s => {
+    const idx = _reservations.findIndex(e => e.id === s.id);
+    if (idx === -1) {
+      _reservations.push(s);
+      changed = true;
+      if (reservationsRef) reservationsRef.add(s).catch(err => console.warn('Seed write failed:', err.message));
+    } else {
+      // Update existing seed if data changed (keep user edits by checking name match)
+      const ex = _reservations[idx];
+      if (ex.name !== s.name || ex.note !== s.note || ex.time !== s.time) {
+        Object.assign(ex, s);
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem('jp-reservations', JSON.stringify(_reservations)); } catch(e) {}
+    if (typeof renderReservasInline === 'function') renderReservasInline();
   }
 }
 
@@ -3952,17 +4059,20 @@ function renderRestaurants() {
 
     const gfNoteHtml = (!isGf && r.gfNote) ? `<div class="resto-v2-gfnote"><strong style="color:rgba(105,219,124,.55)">Celíaco:</strong> ${r.gfNote}</div>` : '';
     const mapsHtml = (r.lat && r.lng) ? `<div class="resto-v2-maps"><a href="https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}" target="_blank">🗺️ Maps</a></div>` : '';
+    const silviaHtml = r.silvia ? `<div class="resto-v2-silvia">⭐ Elegido por Silvia</div>` : '';
 
-    return `<div class="resto-v2-card">
+    return `<div class="resto-v2-card${r.silvia ? ' resto-v2-silvia-pick' : ''}">
       <div class="resto-v2-img ${img}">
         <span class="resto-v2-badge ${badgeClass}">${badgeLabel}</span>
         <span class="resto-v2-type">${typeLabel}</span>
+        ${r.silvia ? '<span class="resto-v2-silvia-star">⭐</span>' : ''}
         <div class="resto-v2-overlay">
           <div class="resto-v2-name">${r.name}</div>
           <div class="resto-v2-hood">📍 ${r.area}</div>
         </div>
       </div>
       <div class="resto-v2-body">
+        ${silviaHtml}
         <div class="resto-v2-desc">${r.desc}</div>
         <div class="resto-v2-meta">
           <span class="resto-v2-price">${r.price}</span>
@@ -4001,7 +4111,7 @@ function renderRestaurants() {
     {emoji:'🐙', name:'Takoyaki (bolas de pulpo)', where:'Dotonbori, Osaka', price:'¥500', gf:false},
     {emoji:'🥟', name:'Nikuman (pan relleno)', where:'Cualquier konbini', price:'¥150', gf:false},
     {emoji:'🍠', name:'Yaki-imo (boniato asado)', where:'Carritos callejeros', price:'¥300', gf:true},
-    {emoji:'🍘', name:'Senbei (galleta de arroz)', where:'Yanaka Ginza, Tokio', price:'¥150', gf:true},
+    {emoji:'🍘', name:'Senbei (galleta de arroz)', where:'Yanaka Ginza, Tokio', price:'¥150', gf:'check', note:'⚠️ Pueden llevar salsa de soja con trigo. Preguntar siempre.'},
     {emoji:'🍢', name:'Oden (estofado)', where:'Konbini / yatai callejeros', price:'¥300', gf:false},
   ];
 
@@ -4098,6 +4208,9 @@ function renderRestaurants() {
         (d.cena.gf || []).forEach(r => allCards.push({r, meal:'cena', gf:true}));
       }
 
+      // Sort Silvia picks first
+      allCards.sort((a, b) => (b.r.silvia ? 1 : 0) - (a.r.silvia ? 1 : 0));
+
       const filtered = gfOnly ? allCards.filter(c => {
         if (c.gf) return true;
         const t = c.r.type || '';
@@ -4110,7 +4223,7 @@ function renderRestaurants() {
       if (filtered.length === 0) return;
 
       html += `<div class="resto-day-group" data-resto-day="${d.day}">
-        <div class="resto-day-label">📅 Día ${d.day} · ${d.date} · ${d.loc}</div>
+        <div class="resto-day-label">📅 Día ${d.day} · ${d.date} · ${d.loc} <span style="font-family:'Noto Sans JP',sans-serif;opacity:.4;font-size:.85em">${CITY_JA[d.loc] || ''}</span></div>
         ${d.seasonal && !gfOnly ? `<div style="padding:0 12px;margin-bottom:2px"><span style="font-size:.72rem;color:rgba(255,212,59,.45)">${d.seasonal}</span></div>` : ''}
         <div class="resto-scroll-wrapper">
           <div class="resto-scroll-row">
@@ -4130,8 +4243,8 @@ function renderRestaurants() {
             ${qItems.map(q => `<div class="resto-quick-item">
               <span class="resto-quick-emoji">${q.emoji}</span>
               <div class="resto-quick-info">
-                <div class="resto-quick-name">${q.name} ${q.gf ? '<span class="resto-quick-gf">GF</span>' : ''}</div>
-                <div class="resto-quick-where">${q.where}</div>
+                <div class="resto-quick-name">${q.name} ${q.gf === true ? '<span class="resto-quick-gf">GF</span>' : q.gf === 'check' ? '<span class="resto-quick-gf" style="background:#4a3a00;color:#ffd43b">⚠️</span>' : ''}</div>
+                <div class="resto-quick-where">${q.where}${q.note ? ' · <span style="color:var(--accent-yellow,#ffd43b);font-size:.7rem">' + q.note + '</span>' : ''}</div>
               </div>
               <span class="resto-quick-price">${q.price}</span>
             </div>`).join('')}
@@ -4557,41 +4670,40 @@ const GUIDE_ROUTE = [
   },
   {
     name:'Magome — Noche en la escuela',emoji:'🏫',days:'Día 7 noche / Día 8 mañana',
-    facts:[{l:'Alojamiento',v:'Guest House Gaku (escuela reconvertida)'},{l:'Onsen',v:'Shuttle gratis 19:00 al Kua Resort'},{l:'Pueblo',v:'Magome-juku, natal de Shimazaki Tōson'}],
+    facts:[{l:'Alojamiento',v:'Guest House Gaku (escuela reconvertida)'},{l:'Pueblo',v:'Magome-juku, natal de Shimazaki Tōson'},{l:'Ambiente',v:'Rural, cielo estrellado, silencio total'}],
     paras:[
       'Llegáis al final del hike directamente a <strong>Magome-juku</strong> y al <strong>Guest House Gaku</strong>, una antigua escuela primaria reconvertida en hostel. Las habitaciones son antiguas aulas, el gimnasio tiene equipo deportivo, y el ambiente es único — dormís en un colegio japonés rural.',
-      'A las 19:00, el hostel ofrece un <strong>shuttle gratuito</strong> al <strong>Kua Resort Yunofunezawa</strong> (クアリゾート湯舟沢), un complejo a 5 min en coche con onsen (aguas termales), piscina, sauna y restaurante. Entrada ¥600 entre semana. Vuelta a las 21:00. El baño perfecto después de 8 km por el bosque.',
-      'Magome es muy pequeño y rural — por la noche solo estáis vosotros y las estrellas. ⚠️ El supermercado del pueblo cierra a las 17:00, comprad lo que necesitéis antes. La mañana del Día 8 es tranquila: check-out a las 12:00, paseo por el pueblo sin gente, y bus a Nakatsugawa Station para coger el tren a Kyoto.'
+      'Magome es muy pequeño y rural — por la noche solo estáis vosotros y las estrellas. Paseo por el pueblo al atardecer y cena en el hostel o izakaya local. ⚠️ El supermercado del pueblo cierra a las 17:00, comprad lo que necesitéis antes. La mañana del Día 8 es tranquila: check-out a las 12:00, paseo por el pueblo sin gente, y bus a Nakatsugawa Station para coger el tren a Kyoto.'
     ],
-    spots: ['Guest House Gaku','Kua Resort Yunofunezawa (onsen)','Magome-juku al atardecer','Cielo estrellado rural'],
-    tip: '♨️ No olvidéis llevar toalla al onsen (o alquilar una allí). Entrada ¥600. El shuttle sale puntual a las 19:00 — no lleguéis tarde.',
+    spots: ['Guest House Gaku','Magome-juku al atardecer','Cielo estrellado rural'],
+    tip: '🌙 Magome de noche es pura magia — las casas Edo iluminadas, el silencio absoluto y el cielo estrellado. Cena temprano y disfrutad el ambiente rural.',
     nov:'🌲 Temperaturas 0-8°C por la noche — puede helar. Magome al amanecer con la bruma es espectacular.'
   },
 
   // ─── DÍA 9: KIOTO (PRIMER DÍA) ───
   {
     name:'Kioto — Templos del kōyō al amanecer',emoji:'🍵',days:'Día 9 — mañana',
-    facts:[{l:'Tōfuku-ji',v:'2.000 arces, ir a las 6:30'},{l:'Gio-ji',v:'Jardín de musgo + arces'},{l:'Otagi Nenbutsu-ji',v:'1.200 estatuas únicas'}],
+    facts:[{l:'Tōfuku-ji',v:'2.000 arces, ir a las 8:30'},{l:'Gio-ji',v:'Jardín de musgo + arces'},{l:'Otagi Nenbutsu-ji',v:'1.200 estatuas únicas'}],
     paras:[
       'Kioto fue capital de Japón durante <strong>más de mil años</strong> (794-1868), desde que el emperador Kanmu trasladó la corte desde Nara. La ciudad fue diseñada como una réplica de <strong>Chang\'an</strong> (la capital Tang china): cuadrícula perfecta, palacio al norte. Sobrevivió la guerra sin bombardeos — el secretario de guerra americano Henry Stimson, que había visitado Kioto en su luna de miel, la sacó de la lista de objetivos nucleares.',
-      'El <strong>pico absoluto del kōyō en Kioto</strong> suele caer entre el 22 y el 25 de noviembre — estáis en pleno centro de la ventana. La clave es madrugar. <strong>Tōfuku-ji</strong> a las 6:30 AM: 2.000 arces en un valle visto desde el puente Tsūtenkyō — casi vacío a esa hora, abarrotado a las 10:00. <strong>Sanjūsangen-dō</strong> está a 10 min andando — 1.001 Kannon doradas en una nave de 120m, cada una única.',
-      'El día fluye por el corredor sureste-este de Kioto: de Tōfuku-ji bajáis a <strong>Fushimi Inari</strong> (1 parada de tren) y el <strong>distrito de sake de Fushimi</strong>, y luego subís a <strong>Gion/Higashiyama</strong> para la ceremonia del té y la iluminación de Eikando. Todo en línea, sin cruzar la ciudad. <strong>Kōmyō-ji</strong> (光明寺) es la alternativa secreta para otro día: un túnel de arces espectacular (<em>momiji no sanmon</em>) con una fracción de la gente de Tōfuku-ji.'
+      'El <strong>pico absoluto del kōyō en Kioto</strong> suele caer entre el 22 y el 25 de noviembre — estáis en pleno centro de la ventana. <strong>Tōfuku-ji</strong> abre a las 8:30 en temporada de otoño: 2.000 arces en un valle visto desde el puente Tsūtenkyō — llegad pronto para evitar colas. <strong>Sanjūsangen-dō</strong> está a 10 min andando — 1.001 Kannon doradas en una nave de 120m, cada una única.',
+      'El día fluye por el corredor sureste-este de Kioto: de Tōfuku-ji bajáis a <strong>Fushimi Inari</strong> (1 parada de tren) para la subida parcial hasta Yotsutsuji, y luego subís a <strong>Gion/Higashiyama</strong> para un paseo largo por Ninenzaka, Sannenzaka y la ceremonia del té, cerrando con la iluminación de Eikando. Todo en línea, sin cruzar la ciudad. <strong>Kōmyō-ji</strong> (光明寺) es la alternativa secreta para otro día: un túnel de arces espectacular (<em>momiji no sanmon</em>) con una fracción de la gente de Tōfuku-ji.'
     ],
-    spots: ['Tōfuku-ji (6:30 AM)','Sanjūsangen-dō (1.001 Kannon)','Fushimi Inari','Fushimi sake','Ceremonia del té (Higashiyama)','Eikando iluminación'],
-    tip: '🍂 Ir a Tōfuku-ji en taxi a las 6:15. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando — 45 min bastan. Luego 1 parada JR a Fushimi Inari, y distrito de sake al lado. 🍵 <strong>Ceremonia del té</strong> por la tarde: <strong>Fukujuen</strong> (Shijo, flagship store, 30 min, ~¥2.625) o <strong>byFood Gion</strong> (60 min, haces tu matcha, ~¥4.000). O simplemente matcha + wagashi en Kodai-ji (~¥500). Reservad online.',
+    spots: ['Tōfuku-ji (8:30 AM)','Sanjūsangen-dō (1.001 Kannon)','Fushimi Inari (versión corta)','Higashiyama (Ninenzaka · Sannenzaka)','Ceremonia del té','Eikando iluminación'],
+    tip: '🍂 Tōfuku-ji abre a las 8:30 en otoño — llegad antes para evitar colas. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando — 45 min bastan. Luego 1 parada JR a Fushimi Inari (subida parcial hasta Yotsutsuji, ~1-1.5h). 🍵 <strong>Ceremonia del té</strong> por la tarde: <strong>Fukujuen</strong> (Shijo, flagship store, 30 min, ~¥2.625) o <strong>byFood Gion</strong> (60 min, haces tu matcha, ~¥4.000). O simplemente matcha + wagashi en Kodai-ji (~¥500). Reservad online.',
     nov:'🍁 Pico kōyō en Kioto: semana del 22-25 nov. Reserva restaurantes con antelación. Mañanas ~5°C.'
   },
   {
-    name:'Kioto — Fushimi: sake, torii y noche sagrada',emoji:'🍵',days:'Día 9 — tarde/noche',
-    facts:[{l:'Sake Fushimi',v:'Gekkeikan (1637) · Kizakura'},{l:'Fushimi Inari',v:'10.000 torii, 24h gratis'},{l:'Eikando',v:'Iluminación nocturna'}],
+    name:'Kioto — Higashiyama, torii y noche sagrada',emoji:'🍵',days:'Día 9 — tarde/noche',
+    facts:[{l:'Fushimi Inari',v:'10.000 torii, 24h gratis'},{l:'Higashiyama',v:'Ninenzaka · Sannenzaka'},{l:'Eikando',v:'Iluminación nocturna'}],
     paras:[
-      'El <strong>distrito de Fushimi</strong> es uno de los mejores distritos de sake de Japón, gracias al agua subterránea <strong>gokōsui</strong> ("agua de aroma imperial") — filtrada a través de capas geológicas durante siglos. <strong>Gekkeikan Ōkura</strong> (la destilería más antigua en funcionamiento continuo, desde 1637) incluye degustación y ediciones limitadas que no se exportan. <strong>Kizakura</strong> tiene un pub-fábrica con sake fresco del barril — la diferencia entre sake embotellado y sake <em>nama</em> (sin pasteurizar) es como la cerveza de barril vs. lata.',
-      '<strong>Fushimi Inari de noche</strong>: los 10.000 torii bermellones se iluminan parcialmente y la montaña queda envuelta en silencio. A partir de las 18:00, si subes más allá de <strong>Yotsutsuji</strong> (la intersección a 30 min de subida), estás prácticamente solo con los zorros de piedra (<em>kitsune</em>, mensajeros del dios Inari, protector de las cosechas y el comercio). El santuario está abierto 24h y es gratuito — uno de los mejores planes nocturnos de todo Japón.',
-      'De vuelta: la <strong>iluminación nocturna de Eikando</strong> (永観堂) es la más bella de Kioto — arces iluminados reflejados en estanques, con un Buda que mira por encima del hombro (el Mikaeri Amida, único en Japón). 17:30-21:00, 700¥. El contraste entre la soledad de Fushimi Inari arriba y el esplendor de Eikando cierra el día de forma extraordinaria.'
+      '<strong>Fushimi Inari</strong>: los 10.000 torii bermellones son el icono de Kioto. La subida parcial hasta <strong>Yotsutsuji</strong> (~1-1.5h ida y vuelta) ofrece las mejores fotos y vistas panorámicas de Kioto sin necesidad de subir hasta la cima. Los zorros de piedra (<em>kitsune</em>) son los mensajeros del dios Inari, protector de las cosechas y el comercio. El santuario es gratuito y está abierto 24h.',
+      'Después de Fushimi, el paseo por <strong>Higashiyama</strong> es el corazón cultural de Kioto: <strong>Ninenzaka</strong> y <strong>Sannenzaka</strong> son callejones empedrados flanqueados por machiya (casas de madera tradicionales) reconvertidas en tiendas de cerámica, dulces y artesanía. Cuatro horas para explorar sin prisas antes de la ceremonia del té.',
+      'La <strong>iluminación nocturna de Eikando</strong> (永観堂) es la más bella de Kioto — arces iluminados reflejados en estanques, con un Buda que mira por encima del hombro (el Mikaeri Amida, único en Japón). 17:30-21:00, 700¥. Un cierre extraordinario para el día.'
     ],
-    spots: ['Fushimi (Gekkeikan · Kizakura)','Fushimi Inari de noche','Yotsutsuji (mirador)','Kitsune (zorros)','Eikando iluminación'],
-    tip: '🍶 Para sake: pide "junmai daiginjo nama" (純米大吟醸生) — sin pasteurizar, sin alcohol añadido, máximo pulido. Fushimi Inari de noche: lleva linterna para los tramos superiores.',
-    nov:'🦊 Noches ~5°C. El contraste de temperatura entre el sake caliente en Fushimi y la subida a Inari es parte de la experiencia.'
+    spots: ['Fushimi Inari (Yotsutsuji)','Higashiyama (Ninenzaka · Sannenzaka)','Ceremonia del té','Eikando iluminación'],
+    tip: '⛩️ Fushimi Inari: gratis, 24h. La subida hasta Yotsutsuji tiene las mejores fotos — no hace falta subir hasta arriba. Después, metro/tren a Gion-Shijo (~15 min) para Higashiyama.',
+    nov:'🦊 Noches ~5°C. Eikando iluminación (17:30-21:00) es imprescindible si estáis en Kioto durante el kōyō.'
   },
 
   // ─── DÍA 10: KIOTO (SEGUNDO DÍA) ───
@@ -4630,15 +4742,15 @@ const GUIDE_ROUTE = [
       '<strong>Tenryu-ji</strong> (天龍寺, Patrimonio UNESCO): fundado en 1339 por Ashikaga Takauji, primer shōgun del periodo Muromachi, en memoria del emperador Go-Daigo. El jardín de <strong>Musō Soseki</strong> — paisajista, poeta y maestro zen — es considerado uno de los más perfectos de Japón: un estanque que refleja la montaña Arashiyama como fondo prestado (<em>shakkei</em>). En noviembre, los arces rojos contra el verde del jardín son impresionantes. Abre a las 8:30.',
       '<strong>Jōjakko-ji</strong> (常寂光寺) es la joya oculta: un templo en colina con 200+ escalones entre arces. En pleno koyo (24 nov), el camino es un túnel rojo natural. Desde arriba, vistas panorámicas de todo Arashiyama. Mucho menos masificado que el bambú o Tenryu-ji.'
     ],
-    spots: ['Bosque de bambú (7:00)','Tenryu-ji (jardín zen)','Jōjakko-ji (arces en colina)','Togetsukyo (puente)','Monkey Park Iwatayama'],
-    tip: '🎋 Id al bambú a las 7:00 — a las 9:00 es otra experiencia. El Monkey Park Iwatayama (550¥, ~20 min subida) tiene macacos en semilibertad con vistas panorámicas de Kyoto. Togetsukyo al atardecer con el río y la montaña en colores otoñales.',
+    spots: ['Bosque de bambú (7:00)','Tenryu-ji (jardín zen)','Togetsukyo (puente)','Monkey Park Iwatayama','Jōjakko-ji (arces en colina)'],
+    tip: '🎋 Id al bambú a las 7:00 — a las 9:00 es otra experiencia. Tras Tenryu-ji, bajad al sur a Togetsukyo y el Monkey Park (550¥, ~20 min subida, vistas panorámicas) y luego subid al norte sin volver atrás: Jōjakko-ji → Gio-ji → Saga-Toriimoto → Otagi.',
     nov:'🍁 Arashiyama en pleno koyo es espectacular pero masificado. La clave es madrugar. Iluminaciones nocturnas en diciembre (no noviembre).'
   },
   {
     name:'Arashiyama — Saga-Toriimoto y despedida de Kyoto',emoji:'🎋',days:'Día 11 — tarde/noche',
     facts:[{l:'Saga-Toriimoto',v:'Calle Edo preservada'},{l:'Adashino Nenbutsu-ji',v:'8.000 figuras de piedra'},{l:'Despedida',v:'Pontocho / Gion'}],
     paras:[
-      '<strong>Saga-Toriimoto</strong> es el Arashiyama que los turistas no ven: una calle de casas de madera Edo preservadas en la ladera norte, lejos del bambú y el puente. Aquí hay talleres de artesanos, una casa de té centenaria (<strong>Hiranoya</strong>, fundada ~400 años), y el silencio que no encontrarás en el bambú a las 10:00. El paseo desde Jōjakko-ji baja naturalmente hacia aquí.',
+      '<strong>Saga-Toriimoto</strong> es el Arashiyama que los turistas no ven: una calle de casas de madera Edo preservadas en la ladera norte, lejos del bambú y el puente. Aquí hay talleres de artesanos, una casa de té centenaria (<strong>Hiranoya</strong>, fundada ~400 años), y el silencio que no encontrarás en el bambú a las 10:00. Subiendo desde Jōjakko-ji y Gio-ji, el paseo continúa naturalmente hacia aquí.',
       '<strong>Adashino Nenbutsu-ji</strong> (化野念仏寺): 8.000 figuras de piedra (<em>sekibutsu</em>) que representan almas de personas sin familia, reunidas desde cementerios abandonados de todo Kyoto a lo largo de siglos. El efecto visual de miles de figuras de piedra cubiertas de musgo entre arces otoñales es profundamente conmovedor. Es uno de los lugares más emotivos y menos visitados de todo Kyoto.',
       'Por la noche, despedida de Kyoto. Volved al centro para una última cena en <strong>Pontocho</strong> (callejón con farolillos junto al río Kamo) o un bar de whisky en <strong>Gion</strong>. Si no fuisteis a Kiyomizu iluminado la otra noche, esta es la última oportunidad (hasta el 30 de noviembre).'
     ],
@@ -4738,13 +4850,13 @@ function renderGuide() {
 
   // Chapter definitions
   const chapters = [
-    {id:'tokyo', label:'Cap. 01', title:'Tokio', subtitle:'Barrios, izakayas y neon', color:'#f783ac', days:[0,1,2,3], entries:GUIDE_HOODS, isHoods:true,
+    {id:'tokyo', label:'Cap. 01', title:'Tokio <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.4;font-size:.7em">東京</span>', subtitle:'Barrios, izakayas y neon', color:'#f783ac', days:[0,1,2,3], entries:GUIDE_HOODS, isHoods:true,
      intro:'Cuatro días para entender una ciudad que no se deja entender. No es la Tokio de las guías — es la de los gado-shita bajo las vías, los kissaten donde el tiempo se paró en los 70, y los callejones de posguerra que resisten entre rascacielos. Cada barrio es un mundo: hay que caminar despacio y dejarse perder.'},
-    {id:'central', label:'Cap. 02', title:'Alpes y Nakasendo', subtitle:'Fuji, castillos y el camino viejo', color:'#74c0fc', days:[4,5,6,7], entries:ROUTE_CENTRAL, isHoods:false,
+    {id:'central', label:'Cap. 02', title:'Alpes y Nakasendo <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.4;font-size:.7em">中仙道</span>', subtitle:'Fuji, castillos y el camino viejo', color:'#74c0fc', days:[4,5,6,7], entries:ROUTE_CENTRAL, isHoods:false,
      intro:'Del asfalto de Tokio a la niebla del Fuji. Kawaguchiko es la puerta de los Alpes japoneses: el lago al amanecer, los onsens con vista al volcán, y después la carretera hacia Matsumoto y el valle de Kiso, donde el Nakasendo conserva posadas de madera que llevan cuatro siglos acogiendo caminantes.'},
-    {id:'kyoto', label:'Cap. 03', title:'Kioto', subtitle:'Templos, bambú y kōyō', color:'#69db7c', days:[8,9,10,11], entries:ROUTE_KYOTO, isHoods:false,
+    {id:'kyoto', label:'Cap. 03', title:'Kioto <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.4;font-size:.7em">京都</span>', subtitle:'Templos, bambú y kōyō', color:'#69db7c', days:[8,9,10,11], entries:ROUTE_KYOTO, isHoods:false,
      intro:'Noviembre en Kioto es kōyō — los arces se incendian de rojo y naranja y la ciudad entera sale a contemplarlos. Templos al amanecer antes de que lleguen las masas, el túnel de bambú de Arashiyama en silencio, Fushimi con sus miles de torii bermellón, y la noche en Gion buscando geikos tras las celosías de madera.'},
-    {id:'nara-osaka', label:'Cap. 04', title:'Nara + Ōsaka', subtitle:'Ciervos sagrados y street food', color:'#b197fc', days:[12,13,14,15], entries:ROUTE_NARA_OSAKA, isHoods:false,
+    {id:'nara-osaka', label:'Cap. 04', title:'Nara + Ōsaka <span style="font-family:\'Noto Sans JP\',sans-serif;font-weight:400;opacity:.4;font-size:.7em">奈良 · 大阪</span>', subtitle:'Ciervos sagrados y street food', color:'#b197fc', days:[12,13,14,15], entries:ROUTE_NARA_OSAKA, isHoods:false,
      intro:'El final del viaje: de la calma espiritual de Nara, con sus ciervos sagrados paseando entre templos milenarios, al caos glorioso de Ōsaka — la capital del kuidaore, "comer hasta caer". Shinsekai, Dōtonbori, los callejones de Nakazakichō: la despedida perfecta.'}
   ];
 
@@ -4989,7 +5101,7 @@ const PREVIAJE = [
      day:'D10 · 23 nov', detail:'21–30 nov, 17:30–21:30, 400¥. Comprobar si hay venta anticipada — si no, ir a las 17:00 para evitar cola.',
      links:[{label:'kiyomizudera.or.jp',url:'https://www.kiyomizudera.or.jp/en/'},{label:'Info 2026',url:'https://glostravel.com/en/article/kiyomizu-dera-autumn-leaves'}]},
     {id:'pv-tofukuji', text:'Consultar Tofuku-ji entrada cronometrada',
-     day:'D9 · 22 nov', detail:'En pico koyo puede haber sistema de entrada por franjas. Abren desde 6:30 — cuanto antes mejor. 1.000¥.',
+     day:'D9 · 22 nov', detail:'En pico koyo puede haber sistema de entrada por franjas. Abren a las 8:30 en otoño — llegad antes de la apertura. 1.000¥.',
      links:[{label:'Info Tofuku-ji',url:'https://selfguidejapan.com/blog/tofukuji-autumn-leaves-2026'}]},
     {id:'pv-ferry', text:'Consultar horarios ferry Sumida (Hamarikyu → Asakusa)',
      day:'D3 · 16 nov', detail:'Ferry Tokyo Cruise / Suijobus desde embarcadero Hamarikyu hasta Asakusa (~35 min, ~1.000¥). Último ferry ~16:30-17:00. Id a Hamarikyu a las 15:00 para disfrutar el jardín y coger ferry al atardecer.',
@@ -5108,7 +5220,7 @@ function renderHoyDashboard() {
       }
       return `<div class="hoy-rc ${state}">
         <div class="hoy-rc-dot"></div>
-        <div class="hoy-rc-code">${rc.code}</div>
+        <div class="hoy-rc-code">${rc.ja || rc.code}</div>
         <div class="hoy-rc-city">${rc.city}</div>
       </div>`;
     }).join('');
@@ -5223,7 +5335,7 @@ function renderHoyDashboard() {
     else if (locLower.includes('kyoto')) gfCity = 'kyoto';
     else if (locLower.includes('osaka')) gfCity = 'osaka';
     else if (locLower.includes('nara')) gfCity = 'nara';
-    const gfNearby = GF_RESTAURANTS.filter(r => r.city === gfCity);
+    const gfNearby = GF_RESTAURANTS.filter(r => r.city === gfCity).sort((a, b) => (b.silvia ? 1 : 0) - (a.silvia ? 1 : 0));
 
     // Determine activity states based on JP hour
     const acts = d.activities || [];
@@ -5346,8 +5458,9 @@ function renderHoyDashboard() {
         }).catch(() => {/* keep fallback */});
     })();
 
-    // Location display (strip emoji)
+    // Location display (strip emoji) + Japanese
     const locDisplay = d.location.replace(/^[✈️🗻🎋🏯]+\s*/,'');
+    const locJa = CITY_JA[locDisplay.split('→')[0].split(':')[0].split('—')[0].trim()] || '';
 
     // Background photos per location (Unsplash)
     const hoyBgs = {
@@ -5374,7 +5487,7 @@ function renderHoyDashboard() {
           <div class="hoy-ds-day" style="color:${d.color || 'var(--text)'}">${String(d.num).padStart(2,'0')}</div>
           <div class="hoy-ds-info">
             <div class="hoy-ds-label">${d.date}</div>
-            <div class="hoy-ds-sub">${locDisplay} · Día ${d.num} de 15</div>
+            <div class="hoy-ds-sub">${locDisplay}${locJa ? ' <span style="font-family:\'Noto Sans JP\',sans-serif;opacity:.4">' + locJa + '</span>' : ''} · Día ${d.num} de 15</div>
             <div class="hoy-ds-weather" id="hoy-weather-live">
               <span class="hoy-ds-weather-temp">${w.emoji} ${w.temp}</span>
               <span>${w.detail}</span>
@@ -5456,7 +5569,7 @@ function renderHoyDashboard() {
       <div class="hoy-gf-strip" onclick="switchTab('celiaco')">
         <div class="hoy-gf-badge">🌾</div>
         <div class="hoy-gf-strip-body">
-          <div class="hoy-gf-strip-title">${gfNearby.length} opciones GF en ${locDisplay}</div>
+          <div class="hoy-gf-strip-title">${gfNearby.length} opciones GF en ${locDisplay}${locJa ? ' <span style="font-family:\'Noto Sans JP\',sans-serif;opacity:.35">' + locJa + '</span>' : ''}</div>
           <div class="hoy-gf-strip-sub">${gfNearby[0].name} (${gfNearby[0].type})</div>
         </div>
         <div class="hoy-gf-strip-arrow">›</div>
@@ -5538,7 +5651,7 @@ function renderTodayCard() {
     const d = DAYS[0];
     html = `<div class="card" style="border-left:4px solid var(--accent-cyan)">
       <div class="card-title">📅 Faltan ${diff} días — Preview del primer día</div>
-      <div style="color:var(--text-secondary);margin-bottom:.5rem">${d.date} · ${d.location}</div>
+      <div style="color:var(--text-secondary);margin-bottom:.5rem">${d.date} · ${d.location} <span style="font-family:'Noto Sans JP',sans-serif;opacity:.4">${CITY_JA[d.location.replace(/^[✈️🗻🎋🏯]+\s*/,'').split('→')[0].split(':')[0].split('—')[0].trim()] || ''}</span></div>
       <div style="color:var(--text-primary);line-height:1.5">${d.highlight || ''}</div>
       <div style="margin-top:.75rem;display:flex;flex-wrap:wrap;gap:.4rem">
         ${(d.activities||[]).slice(0,3).map(a => `<span style="background:var(--bg-card-alt);padding:3px 8px;border-radius:8px;font-size:.78rem">${a.icon} ${a.title.split(':').pop().trim()}</span>`).join('')}
@@ -5558,7 +5671,7 @@ function renderTodayCard() {
 
     const acts = d.activities || [];
     html = `<div class="card" style="border-left:4px solid ${d.color || 'var(--accent-cyan)'}">
-      <div class="card-title" style="font-size:1.1rem">📍 Día ${d.num} — ${d.location}</div>
+      <div class="card-title" style="font-size:1.1rem">📍 Día ${d.num} — ${d.location} <span style="font-family:'Noto Sans JP',sans-serif;font-weight:400;opacity:.35;font-size:.8em">${locJa}</span></div>
       <div style="color:var(--text-secondary);margin-bottom:.4rem;font-size:.85rem">${timeLabel} · ${d.date}</div>
       ${d.highlight ? `<div style="color:var(--text-primary);line-height:1.5;margin-bottom:.75rem;font-size:.9rem">${d.highlight}</div>` : ''}
       <div style="display:flex;flex-direction:column;gap:.5rem">
@@ -5875,11 +5988,12 @@ function renderExpenses() {
       <span class="expense-payer ${payer}">${payerLabel}</span>
       <span class="expense-for ${fw}">→${forLabel}</span>
       <span class="expense-cat">${e.cat}</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.note || ''}</span>
+      <span style="flex:1"></span>
       <span style="font-size:.68rem;color:var(--text-dim)">${e.date}</span>
       <span class="expense-amount">${e.currency==='jpy' ? '¥'+e.jpy.toLocaleString() : '€'+e.eur}</span>
       <span style="font-size:.68rem;color:var(--text-dim)">(${e.currency==='jpy' ? '€'+e.eur : '¥'+e.jpy.toLocaleString()})</span>
       <span class="expense-del" onclick="deleteExpense(${e.id})">✕</span>
+      ${e.note ? '<div class="expense-note">📝 '+e.note+'</div>' : ''}
     </div>`;
   }).join('');
 
