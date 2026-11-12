@@ -9,6 +9,7 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiSmFww7NuIDIwMjYiLCJzaG9ydF9uYW1lIjoiSlAyNiIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGMwZTE0IiwidGhlbWVfY29sb3IiOiIjMGMwZTE0In0=">
 <title>🇯🇵 Japón Nov 2026 — Travel Planner</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap');
 /* Leaflet core (inlined for preview compat) */
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
 .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;outline-offset:1px;font:12px/1.5 sans-serif}
@@ -146,7 +147,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 /* MAIN */
 .main{max-width:1100px;margin:0 auto;padding:1rem}
-.tab-panel{display:none;animation:fadeUp .35s ease}
+.tab-panel{display:none;animation:fadeUp .35s ease;overflow-x:hidden}
 .tab-panel.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
@@ -578,7 +579,6 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .pv-progress-label{font-size:.72rem;color:var(--text-muted);margin-top:2px}
 
 /* ============ V2 HOY DASHBOARD ============ */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap');
 .hoy-status{
   padding:14px 12px 10px;display:flex;align-items:center;justify-content:space-between;
 }
@@ -1094,27 +1094,6 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .resto-chip.on{background:var(--text);color:var(--bg);border-color:transparent}
 .resto-chip:hover:not(.on){border-color:rgba(255,255,255,.15)}
 .resto-chip-icon{margin-right:3px}
-
-/* Featured pick */
-.resto-featured{
-  margin:14px 12px 0;padding:0;border-radius:16px;overflow:hidden;
-  background:var(--surface2);border:1px solid rgba(247,131,172,.1);
-}
-.resto-featured-header{
-  padding:10px 14px;
-  background:rgba(247,131,172,.06);
-  display:flex;align-items:center;gap:6px;
-}
-.resto-featured-label{font-size:.88rem;font-weight:800;color:#f783ac;text-transform:uppercase;letter-spacing:.06em}
-.resto-featured-body{display:flex;gap:12px;padding:12px 14px}
-.resto-featured-img{
-  width:70px;height:70px;border-radius:10px;flex-shrink:0;
-}
-.resto-featured-info{flex:1;min-width:0}
-.resto-featured-name{font-size:.95rem;font-weight:700;color:var(--text)}
-.resto-featured-sub{font-size:.82rem;color:rgba(255,255,255,.5);margin-top:2px}
-.resto-featured-desc{font-size:.88rem;color:rgba(255,255,255,.55);margin-top:4px;line-height:1.5}
-.resto-featured-meta{display:flex;gap:8px;align-items:center;margin-top:6px}
 
 /* Day group sections */
 .resto-day-group{margin-top:4px}
@@ -1738,6 +1717,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .aloj-tip strong{color:var(--accent-blue)}
 
 </style>
+<!-- Service Worker registration for offline support -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      console.log('SW registered, scope:', reg.scope);
+      // Check for updates every 30 min
+      setInterval(function(){ reg.update(); }, 1800000);
+    }).catch(function(err) {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
+</script>
 <!-- Firebase SDK — dynamic loader with CDN fallback -->
 <script>
 (function(){
@@ -1914,8 +1907,8 @@ function refreshCheckboxUI() {
   const activePanel = document.querySelector('.tab-panel.active');
   if (!activePanel) return;
   const id = activePanel.id;
-  if (id === 'panel-plan') renderPreviaje();
-  else if (id === 'panel-days') {
+  if (id === 'panel-previaje') renderPreviaje();
+  else if (id === 'panel-itinerario') {
     activePanel.querySelectorAll('input[type="checkbox"][onchange*="toggleCheck"]').forEach(cb => {
       const match = cb.getAttribute('onchange').match(/toggleCheck\('([^']+)'/);
       if (match) cb.checked = !!_checks[match[1]];
@@ -2075,7 +2068,7 @@ const ACCOMMODATIONS = [
   {id:'tokyo',label:'Tokio',days:[1,2,3],dayLabel:'D1–3',nights:'3 noches',dates:'14→17 nov',color:'#b197fc',booked:true,
    note:'📍 Aobadai, Meguro-ku — barrio residencial tranquilo entre Shibuya y Nakameguro. Calles con cafés y tiendas locales, lejos del bullicio turístico. 🚇 Ikejiri-Ōhashi (Den-en-toshi line) 8 min · Shinsen (Keio-Inokashira) 8 min · Shibuya 16 min a pie · Bus: Ōsakaue 5 min.',
    items:[
-    {name:'Wise Owl Hostels Shibuya',price:'€76 total (3 noches)',rating:'—',desc:'Hostel con restaurante/bar propio en planta baja (OWL\'s Kitchen). Zona Meguro, bien conectada por metro.',url:'https://wiseowlhostels.com/shibuya/',featured:true,lat:35.6540,lng:139.6870,
+    {name:'Wise Owl Hostels Shibuya',price:'€195 total (3 noches · €65/noche)',rating:'—',desc:'Hostel con restaurante/bar propio en planta baja (OWL\'s Kitchen). Zona Meguro, bien conectada por metro.',url:'https://wiseowlhostels.com/shibuya/',featured:true,lat:35.6540,lng:139.6870,
      facilities:'🚿 Baño compartido (duchas + bidé) · 🍳 Cocina compartida · 📶 WiFi gratis · 👕 Lavandería · 🔒 Taquillas con llave · 🧴 Amenities (toalla, jabón, champú) · 🏪 Bar/restaurante en planta baja (OWL\'s Kitchen) · 🔌 USB en cada cama',
      checkin:'Check-in 16:00–23:00 · Check-out 11:00 · 🏪 Recepción: mar–sáb 13:00–22:00 · ⚠️ Fuera de horario recepción: self check-in posible',
      gym:{has:false,nearby:'TIP.X.Tokyo Shibuya (¥3.300/día, 10 min a pie) · Gold\'s Gym Shibuya (¥3.960/día) · Anytime Fitness Shibuya (solo miembros con llave de otro país)'}},
@@ -2131,7 +2124,7 @@ const ACCOMMODATIONS = [
   {id:'osaka',label:'Osaka',days:[13,14],dayLabel:'D13–14',nights:'2 noches',dates:'26→28 nov',color:'#ff6b6b',booked:true,
    note:'📍 Kōzu, Chūō-ku — zona residencial tranquila. Kuromon Market a 270m, Dōtonbori a 710m, Namba a 10 min a pie. Konbinis y bakeries cerca. 🚇 Nippombashi Station (Sakaisuji + Sennichimae lines) 5 min a pie · Kintetsu-Nippombashi también 5 min.',
    items:[
-    {name:'PG Kuromon',price:'€90 (2 noches)',rating:'—',desc:'Apartamento privado completo renovado en 2025.',url:'https://us.trip.com/hotels/osaka-hotel-detail-7138508/pg-kuromon/',featured:true,lat:34.6630,lng:135.5070,
+    {name:'PG Kuromon',price:'€100 (2 noches · ¥16.142)',rating:'—',desc:'Apartamento privado completo renovado en 2025.',url:'https://us.trip.com/hotels/osaka-hotel-detail-7138508/pg-kuromon/',featured:true,lat:34.6630,lng:135.5070,
      facilities:'🛁 Baño privado con bañera profunda + ducha separada · 🍳 Cocina privada completa (fogones + microondas + nevera) · 📶 WiFi gratis · 🔐 Self check-in/check-out (doble cerradura) · 🛗 Ascensor · ⚠️ Sin desayuno ni restaurante · ⚠️ Consigna solo 10:00–16:00',
      checkin:'Check-in 15:00–17:00 · Check-out 10:00 · ⚠️ Ventana de check-in corta (2h) · 🏪 Front desk: lun–dom 10:00–17:00 · ⚠️ Contactar el día anterior para instrucciones de acceso · 🗣️ Staff habla EN + ZH + KO',
      gym:{has:false,nearby:'Naniwa Sports Center (¥700/día — gimnasio público, 15 min a pie) · Urban Fit 24 Namba (¥2.530/día, 10 min a pie) · Gold\'s Gym Shinsaibashi (¥2.860/día, piscina+sauna)'}},
@@ -2693,6 +2686,10 @@ const TIPS = [
 
 // ===================== DAY ALERTS =====================
 const DAY_ALERTS = {
+  0: ['💴 EFECTIVO CHINA: Llevad ~¥400 CNY/persona (~54€). Puestos de comida y atracciones solo aceptan efectivo o móvil chino. Visa/Mastercard contactless funciona en el metro, pero NO en Maglev, Yu Garden ni street food. Cambiad en el aeropuerto de Pudong al llegar.',
+      '🧳 Consigna aeropuerto Pudong: ~¥40-60/taquilla. Dejad mochilas y salid ligeros.',
+      '🚄 Maglev PVG→Longyang Rd: ¥50/pp (¥40 con tarjeta de embarque). Último ~21:30.',
+      '⏰ Volved al aeropuerto mínimo 3h antes del vuelo a Narita.'],
   1: ['🕐 Check-in Wise Owl Shibuya: 16:00–23:00 · Self check-in fuera de horario recepción',
       '✈️ Aterrizáis 18:10 NRT — con inmigración + NEX llegaréis a Shibuya ~20:30. Primera noche tranquila, no os compliquéis.',
       '🍽️ MAÑANA D2: GF T\'s Kitchen Ueno 13:00 ✅ RESERVADO. Cancelación: 3.000¥/grupo última semana. >20min tarde sin aviso = cancelación automática.',
@@ -3887,7 +3884,7 @@ function renderReservasInline() {
   const restoContainer = document.getElementById('resto-reservas-list');
   if (restoContainer) renderReservasSection(restoContainer);
   // Re-render itinerario reservation badges
-  const daysPanel = document.getElementById('panel-days');
+  const daysPanel = document.getElementById('panel-itinerario');
   if (daysPanel) {
     daysPanel.querySelectorAll('.dias-reserva-slot').forEach(slot => {
       const dayNum = parseInt(slot.dataset.day);
@@ -4115,31 +4112,8 @@ function renderRestaurants() {
     {emoji:'🍢', name:'Oden (estofado)', where:'Konbini / yatai callejeros', price:'¥300', gf:false},
   ];
 
-  // Featured pick — pick from current day's DAILY_EATS or a highlight
-  function getFeaturedPick() {
-    const tripStart = new Date(2026, 10, 14);
-    const today = getHoyDate(); today.setHours(0,0,0,0);
-    const diff = Math.floor((today - tripStart) / 86400000);
-    let dayNum = diff;
-    if (dayNum < 0 || dayNum > 15) {
-      // Pre/post trip: rotate daily through all days with restaurants
-      const daysWithFood = DAILY_EATS.filter(d => d.cena || d.comida).map(d => d.day);
-      const dayOfYear = Math.floor((today - new Date(today.getFullYear(),0,0)) / 86400000);
-      dayNum = daysWithFood[dayOfYear % daysWithFood.length] || 1;
-    }
-    const dayData = DAILY_EATS.find(d => d.day === dayNum);
-    if (!dayData) return null;
-    // Pick first cena spot or first comida spot
-    const meal = dayData.cena || dayData.comida;
-    if (!meal || !meal.spots || meal.spots.length === 0) return null;
-    const pick = meal.spots[0];
-    const mealLabel = dayData.cena ? 'cena' : 'comida';
-    return { ...pick, dayNum, dayLoc: dayData.loc, mealLabel };
-  }
 
   function render() {
-    const featured = getFeaturedPick();
-    const featuredImg = featured ? (typeToImg[featured.type] || 'resto-img-default') : '';
 
     let html = '';
 
@@ -4171,26 +4145,6 @@ function renderRestaurants() {
       <strong>🌾 Guía celíaca rápida:</strong> Llevar tamari (soja sin gluten). Seguros: sashimi, nigirizushi, onigiri, edamame, arroz, mochi. ⚠️ Yakitori: la sal puede estar contaminada con soja en parrillas compartidas — pedir "shio dake, shoyu nashi". Peligro: soba, tempura, ramen, udon, curry, salsa de soja.
     </div>`;
 
-    // Featured pick
-    if (featured && activeFilter === 'all') {
-      html += `<div class="resto-featured">
-        <div class="resto-featured-header">
-          <span class="resto-featured-label">⭐ Recomendación del día</span>
-        </div>
-        <div class="resto-featured-body">
-          <div class="resto-featured-img ${featuredImg}" style="width:70px;height:70px;border-radius:10px;flex-shrink:0"></div>
-          <div class="resto-featured-info">
-            <div class="resto-featured-name">${featured.name}</div>
-            <div class="resto-featured-sub">${featured.area} · Día ${featured.dayNum}, ${featured.mealLabel}</div>
-            <div class="resto-featured-desc">${featured.desc}</div>
-            <div class="resto-featured-meta">
-              <span class="resto-v2-price">${featured.price}</span>
-              <div class="resto-v2-rating">${ratingDots(priceToRating(featured.price))}</div>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    }
 
     // Day groups
     DAILY_EATS.forEach(d => {
@@ -4309,23 +4263,23 @@ function renderBudget() {
     <div class="card">
       <div class="card-title">🏠 Alojamiento reservado — pendiente de pago</div>
       <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem">📋 Reservado · Se irá pagando y registrando en 💸 Gastos</p>
-      <div class="budget-row"><span>D1–3 · Wise Owl Hostels Shibuya (3 noches)</span><span class="amount">76€</span></div>
+      <div class="budget-row"><span>D1–3 · Wise Owl Hostels Shibuya (3 noches)</span><span class="amount">195€</span></div>
       <div class="budget-row"><span>D4 · GuestHouse Guu, Kawaguchiko (1 noche)</span><span class="amount">76€</span></div>
       <div class="budget-row"><span>D5 · tabi-shiro, Matsumoto (1 noche)</span><span class="amount">81€</span></div>
       <div class="budget-row"><span>D6 · yama-niwa-INN, Narai (1 noche)</span><span class="amount">87€</span></div>
       <div class="budget-row"><span>D7 · Magome Furusato Gakkou (1 noche, 2 hab.)</span><span class="amount">73€</span></div>
       <div class="budget-row"><span>D8–11 · Fujitaya BnB, Kyoto (4 noches)</span><span class="amount">323€</span></div>
       <div class="budget-row"><span>D12 · SLOW HOUSE NARA (1 noche)</span><span class="amount">67€</span></div>
-      <div class="budget-row"><span>D13–14 · PG Kuromon, Osaka (2 noches)</span><span class="amount">90€</span></div>
-      <div class="budget-row total"><span>Total alojamiento estimado (14 noches)</span><span class="amount">873€</span></div>
-      <div class="budget-row" style="color:var(--text-muted)"><span>Por persona</span><span class="amount">437€/pp</span></div>
-      <div class="budget-row" style="color:var(--text-muted)"><span>Media por noche</span><span class="amount">62€/noche · 31€/pp/noche</span></div>
+      <div class="budget-row"><span>D13–14 · PG Kuromon, Osaka (2 noches)</span><span class="amount">100€</span></div>
+      <div class="budget-row total"><span>Total alojamiento estimado (14 noches)</span><span class="amount">1.002€</span></div>
+      <div class="budget-row" style="color:var(--text-muted)"><span>Por persona</span><span class="amount">501€/pp</span></div>
+      <div class="budget-row" style="color:var(--text-muted)"><span>Media por noche</span><span class="amount">72€/noche · 36€/pp/noche</span></div>
       <div id="budget-accom-paid" style="margin-top:.5rem"></div>
     </div>
 
     <div class="card">
       <div class="card-title">🎚️ Calculadora de presupuesto</div>
-      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem">Alojamiento reservado (~873€, pendiente de pago → irá en Gastos). Ajusta comida y actividades.</p>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem">Alojamiento reservado (~1.002€, pendiente de pago → irá en Gastos). Ajusta comida y actividades.</p>
 
       <div class="budget-category">
         <h3>🍜 Comida diaria / persona</h3>
@@ -4370,7 +4324,7 @@ function calcBudget() {
   const food = parseInt(document.getElementById('slider-food').value);
   const act = parseInt(document.getElementById('slider-act').value);
   const transportPP = BUDGET.transport.reduce((s,t) => s + t.cost, 0);
-  const accomTotal = 873; // confirmed bookings total for 2 people
+  const accomTotal = 1002; // confirmed bookings total for 2 people
   const flightsPP = 670; // confirmed flights per person
   const misc = 10;
 
@@ -4552,7 +4506,7 @@ const GUIDE_HOODS = [
   },
   {
     name: 'Sangenjaya',
-    day: 'Día 3 — noche',
+    day: 'Día 3 — mediodía',
     paragraphs: [
       'El nombre "Sangenjaya" (三軒茶屋, "tres casas de té") viene literalmente de la era Edo (1603-1868): tres casas de té servían a los peregrinos que caminaban la <strong>Ōyama-dō</strong>, la ruta de peregrinación al Monte Ōyama en Kanagawa. Hoy es un barrio residencial de clase trabajadora con la densidad de bares más alta por metro cuadrado fuera de Golden Gai — y la guía Lonely Planet no lo menciona.',
       'El corazón es el <strong>Sankaku Chitai</strong> (三角地帯, "zona triangular"): un laberinto de callejones formado por la intersección irregular de dos calles. Aquí se apelotonan bares e izakayas de 4-6 asientos donde practicar <strong>hashigo-zake</strong> (梯子酒, "escalera de sake") — el arte de ir saltando de bar en bar, una copa en cada uno, charlando con desconocidos en la barra.',
@@ -4683,14 +4637,14 @@ const GUIDE_ROUTE = [
   // ─── DÍA 9: KIOTO (PRIMER DÍA) ───
   {
     name:'Kioto — Templos del kōyō al amanecer',emoji:'🍵',days:'Día 9 — mañana',
-    facts:[{l:'Tōfuku-ji',v:'2.000 arces, ir a las 8:30'},{l:'Gio-ji',v:'Jardín de musgo + arces'},{l:'Otagi Nenbutsu-ji',v:'1.200 estatuas únicas'}],
+    facts:[{l:'Tōfuku-ji',v:'2.000 arces, ir a las 8:30'},{l:'Sanjūsangen-dō',v:'1.001 Kannon doradas'},{l:'Fushimi Inari',v:'10.000 torii, subida parcial'}],
     paras:[
       'Kioto fue capital de Japón durante <strong>más de mil años</strong> (794-1868), desde que el emperador Kanmu trasladó la corte desde Nara. La ciudad fue diseñada como una réplica de <strong>Chang\'an</strong> (la capital Tang china): cuadrícula perfecta, palacio al norte. Sobrevivió la guerra sin bombardeos — el secretario de guerra americano Henry Stimson, que había visitado Kioto en su luna de miel, la sacó de la lista de objetivos nucleares.',
       'El <strong>pico absoluto del kōyō en Kioto</strong> suele caer entre el 22 y el 25 de noviembre — estáis en pleno centro de la ventana. <strong>Tōfuku-ji</strong> abre a las 8:30 en temporada de otoño: 2.000 arces en un valle visto desde el puente Tsūtenkyō — llegad pronto para evitar colas. <strong>Sanjūsangen-dō</strong> está a 10 min andando — 1.001 Kannon doradas en una nave de 120m, cada una única.',
       'El día fluye por el corredor sureste-este de Kioto: de Tōfuku-ji bajáis a <strong>Fushimi Inari</strong> (1 parada de tren) para la subida parcial hasta Yotsutsuji, y luego subís a <strong>Gion/Higashiyama</strong> para un paseo largo por Ninenzaka, Sannenzaka y la ceremonia del té, cerrando con la iluminación de Eikando. Todo en línea, sin cruzar la ciudad. <strong>Kōmyō-ji</strong> (光明寺) es la alternativa secreta para otro día: un túnel de arces espectacular (<em>momiji no sanmon</em>) con una fracción de la gente de Tōfuku-ji.'
     ],
     spots: ['Tōfuku-ji (8:30 AM)','Sanjūsangen-dō (1.001 Kannon)','Fushimi Inari (versión corta)','Higashiyama (Ninenzaka · Sannenzaka)','Ceremonia del té','Eikando iluminación'],
-    tip: '🍂 Tōfuku-ji abre a las 8:30 en otoño — llegad antes para evitar colas. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando — 45 min bastan. Luego 1 parada JR a Fushimi Inari (subida parcial hasta Yotsutsuji, ~1-1.5h). 🍵 <strong>Ceremonia del té</strong> por la tarde: <strong>Fukujuen</strong> (Shijo, flagship store, 30 min, ~¥2.625) o <strong>byFood Gion</strong> (60 min, haces tu matcha, ~¥4.000). O simplemente matcha + wagashi en Kodai-ji (~¥500). Reservad online.',
+    tip: '🍂 Tōfuku-ji abre a las 8:30 en otoño — llegad antes para evitar colas. 1.000¥ entrada. <strong>Sanjūsangen-dō</strong> (600¥, abre 8:00) está a 10 min andando — 45 min bastan. Luego 1 parada JR a Fushimi Inari (subida parcial hasta Yotsutsuji, ~1-1.5h). 🍵 <strong>Ceremonia del té a las 17:00: Flower Teahouse</strong> (Higashiyama) — ✅ YA RESERVADO. Matcha + wagashi, ~45-60 min.',
     nov:'🍁 Pico kōyō en Kioto: semana del 22-25 nov. Reserva restaurantes con antelación. Mañanas ~5°C.'
   },
   {
@@ -5637,63 +5591,7 @@ function renderHoyDashboard() {
 }
 
 // ===================== TRIP CLOCK =====================
-function renderTodayCard() {
-  const container = document.getElementById('today-card-container');
-  if (!container) return;
-  const now = getHoyDate();
-  const tripStart = new Date('2026-11-14T00:00:00+09:00');
-  const tripEnd = new Date('2026-11-28T23:59:59+09:00');
-
-  let html = '';
-  if (now < tripStart) {
-    // Before trip — preview Day 0
-    const diff = Math.ceil((tripStart - now) / (1000*60*60*24));
-    const d = DAYS[0];
-    html = `<div class="card" style="border-left:4px solid var(--accent-cyan)">
-      <div class="card-title">📅 Faltan ${diff} días — Preview del primer día</div>
-      <div style="color:var(--text-secondary);margin-bottom:.5rem">${d.date} · ${d.location} <span style="font-family:'Noto Sans JP',sans-serif;opacity:.4">${CITY_JA[d.location.replace(/^[✈️🗻🎋🏯]+\s*/,'').split('→')[0].split(':')[0].split('—')[0].trim()] || ''}</span></div>
-      <div style="color:var(--text-primary);line-height:1.5">${d.highlight || ''}</div>
-      <div style="margin-top:.75rem;display:flex;flex-wrap:wrap;gap:.4rem">
-        ${(d.activities||[]).slice(0,3).map(a => `<span style="background:var(--bg-card-alt);padding:3px 8px;border-radius:8px;font-size:.78rem">${a.icon} ${a.title.split(':').pop().trim()}</span>`).join('')}
-      </div>
-    </div>`;
-  } else if (now <= tripEnd) {
-    // During trip
-    const dayNum = Math.ceil((now - tripStart) / (1000*60*60*24));
-    const dayIdx = Math.min(dayNum, DAYS.length - 1);
-    // Find the matching DAYS entry (num matches dayIdx or closest)
-    const d = DAYS.find(x => x.num === dayIdx) || DAYS[dayIdx] || DAYS[DAYS.length-1];
-    const jpHour = parseInt(now.toLocaleString('en-US',{timeZone:'Asia/Tokyo',hour:'numeric',hour12:false}));
-    // Pick time-appropriate activities
-    let timeLabel = '🌅 Buenos días';
-    if (jpHour >= 12 && jpHour < 17) timeLabel = '☀️ Buenas tardes';
-    else if (jpHour >= 17) timeLabel = '🌙 Buenas noches';
-
-    const acts = d.activities || [];
-    html = `<div class="card" style="border-left:4px solid ${d.color || 'var(--accent-cyan)'}">
-      <div class="card-title" style="font-size:1.1rem">📍 Día ${d.num} — ${d.location} <span style="font-family:'Noto Sans JP',sans-serif;font-weight:400;opacity:.35;font-size:.8em">${locJa}</span></div>
-      <div style="color:var(--text-secondary);margin-bottom:.4rem;font-size:.85rem">${timeLabel} · ${d.date}</div>
-      ${d.highlight ? `<div style="color:var(--text-primary);line-height:1.5;margin-bottom:.75rem;font-size:.9rem">${d.highlight}</div>` : ''}
-      <div style="display:flex;flex-direction:column;gap:.5rem">
-        ${acts.map(a => `<div style="display:flex;gap:.5rem;align-items:flex-start">
-          <span style="font-size:1.1rem;flex-shrink:0">${a.icon}</span>
-          <div><strong style="color:var(--text-primary);font-size:.85rem">${a.title}</strong></div>
-        </div>`).join('')}
-      </div>
-      <div style="margin-top:.75rem;text-align:right">
-        <span onclick="switchTab('itinerario');setTimeout(()=>{const el=document.querySelector('[data-day=\\'${d.num}\\']');if(el)el.scrollIntoView({behavior:'smooth'})},100)"
-              style="color:var(--accent-cyan);cursor:pointer;font-size:.82rem">Ver día completo →</span>
-      </div>
-    </div>`;
-  } else {
-    // Trip finished
-    html = `<div class="card" style="border-left:4px solid var(--accent-green)">
-      <div class="card-title">✨ Viaje completado</div>
-      <div style="color:var(--text-secondary)">14-28 nov 2026 · 15 días · 8 ciudades</div>
-    </div>`;
-  }
-  container.innerHTML = html;
-}
+// renderTodayCard() removed — superseded by renderHoyDashboard()
 
 function updateTripClock() {
   const numEl = document.getElementById('countdown-days');
@@ -5811,7 +5709,7 @@ function renderTools() {
     <div class="fx-box" style="position:relative">
       <div class="card-title">💸 Gastos</div>
       <span id="sync-indicator" class="sync-status syncing"><span class="sync-dot"></span>Sincronizando…</span>
-      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">Registrad cada gasto del viaje. Se sincroniza entre dispositivos en tiempo real.</p>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">Registra cada gasto del viaje. Se sincroniza entre dispositivos en tiempo real.</p>
       <div class="expense-add-row">
         <input type="number" id="exp-amount" placeholder="Cantidad" style="min-width:70px">
         <select id="exp-currency"><option value="jpy">¥ JPY</option><option value="eur">€ EUR</option></select>
@@ -5958,9 +5856,9 @@ function updateBudgetExpenses() {
   const accomEl = document.getElementById('budget-accom-paid');
   if (accomEl) {
     const accomPaid = expenses.filter(e => e.cat === '🏠 Alojamiento').reduce((s,e) => s + e.eur, 0);
-    const accomTarget = 873;
+    const accomTarget = 1002;
     const pct = Math.min(100, Math.round(accomPaid / accomTarget * 100));
-    accomEl.innerHTML = accomPaid > 0 ? '<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px">Pagado hasta ahora:</div><div style="background:var(--surface3);border-radius:6px;height:8px;overflow:hidden"><div style="height:100%;border-radius:6px;background:var(--accent-green);width:' + pct + '%;transition:width .3s"></div></div><div style="font-size:.72rem;color:var(--text-dim);margin-top:4px">€' + accomPaid.toFixed(2) + ' / ~873€ (' + pct + '%)</div>' : '';
+    accomEl.innerHTML = accomPaid > 0 ? '<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px">Pagado hasta ahora:</div><div style="background:var(--surface3);border-radius:6px;height:8px;overflow:hidden"><div style="height:100%;border-radius:6px;background:var(--accent-green);width:' + pct + '%;transition:width .3s"></div></div><div style="font-size:.72rem;color:var(--text-dim);margin-top:4px">€' + accomPaid.toFixed(2) + ' / ~1.002€ (' + pct + '%)</div>' : '';
   }
 }
 
@@ -6068,12 +5966,11 @@ window.addEventListener('DOMContentLoaded', () => {
   renderPhrases();
   renderTools();
   renderPreviaje();
-  renderTodayCard();
   renderHoyDashboard();
   seedReservations();
   renderReservasInline();
   updateTripClock();
-  setInterval(() => { updateTripClock(); renderTodayCard(); renderHoyDashboard(); }, 60000);
+  setInterval(() => { updateTripClock(); renderHoyDashboard(); }, 60000);
 });
 </script>
 </body>
