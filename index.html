@@ -3004,7 +3004,7 @@ const REGION_GROUPS = [
 // Route cities for the progress bar
 // Japanese city name lookup
 const CITY_JA = {
-  'Shanghai':'上海','Shanghái':'上海',
+  'Shanghai':'上海','Shanghái':'上海','Escala Shanghái':'上海',
   'Tokio':'東京','Tokyo':'東京',
   'Fuji':'富士','Kawaguchiko':'河口湖','Kawaguchiko (Fuji)':'河口湖',
   'Matsumoto':'松本','Matsumo.':'松本',
@@ -3053,6 +3053,13 @@ function getCurrentTripDay() {
   const calDates = [14,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28];
   const now = getHoyDate();
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Nov 14 has Day 0 (Shanghai daytime) AND Day 1 (Tokyo evening)
+  // Before 17:00 JST (~16:00 Shanghai) → Day 0, after → Day 1
+  const nov14 = new Date(2026, 10, 14);
+  if (todayDate.getTime() === nov14.getTime()) {
+    const h = parseInt(now.toLocaleString('en-US',{timeZone:'Asia/Tokyo',hour:'numeric',hour12:false}));
+    return h < 17 ? 0 : 1;
+  }
   for (let i = 15; i >= 0; i--) {
     const tripDate = new Date(2026, 10, calDates[i]);
     if (todayDate >= tripDate) return i;
@@ -5275,11 +5282,14 @@ function renderHoyDashboard() {
       </div>`;
   } else if (now <= tripEnd) {
     // ── DURING TRIP STATE ──
-    const dayNum = Math.ceil((now - tripStart) / (1000*60*60*24));
-    const dayIdx = Math.min(dayNum, DAYS.length - 1);
-    const d = DAYS.find(x => x.num === dayIdx) || DAYS[dayIdx] || DAYS[DAYS.length-1];
-    const jpHour = parseInt(now.toLocaleString('en-US',{timeZone:'Asia/Tokyo',hour:'numeric',hour12:false}));
-    const nextDay = DAYS.find(x => x.num === dayIdx + 1);
+    const dayNum = getCurrentTripDay();
+    const d = DAYS.find(x => x.num === dayNum) || DAYS[Math.min(dayNum, DAYS.length-1)] || DAYS[DAYS.length-1];
+    // Day 0 = Shanghai (UTC+8), rest = Japan (UTC+9)
+    const localTz = dayNum === 0 ? 'Asia/Shanghai' : 'Asia/Tokyo';
+    const localTzLabel = dayNum === 0 ? 'CN' : 'JP';
+    const localTime = now.toLocaleString('es-ES', {timeZone:localTz, hour:'2-digit', minute:'2-digit', hour12:false});
+    const jpHour = parseInt(now.toLocaleString('en-US',{timeZone:localTz,hour:'numeric',hour12:false}));
+    const nextDay = DAYS.find(x => x.num === dayNum + 1);
 
     // Find GF restaurants for today's location
     const locLower = (d.location || '').toLowerCase();
@@ -5349,12 +5359,14 @@ function renderHoyDashboard() {
 
     // Weather — try Open-Meteo API, fallback to static estimates
     const weatherCoords = {
+      'shanghai': {lat:31.2304,lng:121.4737},
       'tokyo': {lat:35.6762,lng:139.6503}, 'kawaguchiko': {lat:35.5010,lng:138.7580},
       'matsumoto': {lat:36.2380,lng:137.9720}, 'narai': {lat:35.9690,lng:137.8095},
       'magome': {lat:35.5310,lng:137.5680}, 'kyoto': {lat:35.0116,lng:135.7681},
       'nara': {lat:34.6851,lng:135.8048}, 'osaka': {lat:34.6937,lng:135.5023}
     };
     const weatherFallback = {
+      'shanghai': {emoji:'🌧️',temp:'16°C',detail:'Lluvia ligera · Máx 18°'},
       'tokyo': {emoji:'☁️',temp:'14°C',detail:'Nublado · Máx 17°'},
       'kawaguchiko': {emoji:'🌤',temp:'8°C',detail:'Parcialmente nublado · Máx 12°'},
       'matsumoto': {emoji:'🌤',temp:'7°C',detail:'Fresco · Máx 11°'},
@@ -5365,7 +5377,8 @@ function renderHoyDashboard() {
       'osaka': {emoji:'☀️',temp:'13°C',detail:'Soleado · Máx 17°'},
     };
     let wKey = 'tokyo';
-    if (locLower.includes('kawaguchiko') || locLower.includes('fuji')) wKey = 'kawaguchiko';
+    if (locLower.includes('shangh')) wKey = 'shanghai';
+    else if (locLower.includes('kawaguchiko') || locLower.includes('fuji')) wKey = 'kawaguchiko';
     else if (locLower.includes('matsumoto')) wKey = 'matsumoto';
     else if (locLower.includes('narai')) wKey = 'narai';
     else if (locLower.includes('magome')) wKey = 'magome';
@@ -5384,7 +5397,7 @@ function renderHoyDashboard() {
         if (c <= 82) return '🌧️'; if (c <= 86) return '🌨️'; return '⛈️';
       };
       // Fetch today + next 2 days
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=Asia/Tokyo&forecast_days=3`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=${encodeURIComponent(localTz)}&forecast_days=3`)
         .then(r => r.json()).then(data => {
           if (!data.current_weather) return;
           const cw = data.current_weather;
@@ -5432,8 +5445,8 @@ function renderHoyDashboard() {
 
     html = `
       <div class="hoy-status">
-        <div class="hoy-sb-left"><div class="hoy-sb-logo">🇯🇵 Japón <span>'26</span></div></div>
-        <div class="hoy-sb-time">🕐 ${jpTime} JP · ${bcnTime} BCN</div>
+        <div class="hoy-sb-left"><div class="hoy-sb-logo">${dayNum === 0 ? '🇨🇳 Shanghái' : '🇯🇵 Japón'} <span>'26</span></div></div>
+        <div class="hoy-sb-time">🕐 ${localTime} ${localTzLabel} · ${bcnTime} BCN</div>
       </div>
 
       <div class="hoy-day-strip" style="--hoy-bg:${hoyBg}">
@@ -5441,7 +5454,7 @@ function renderHoyDashboard() {
           <div class="hoy-ds-day" style="color:${d.color || 'var(--text)'}">${String(d.num).padStart(2,'0')}</div>
           <div class="hoy-ds-info">
             <div class="hoy-ds-label">${d.date}</div>
-            <div class="hoy-ds-sub">${locDisplay}${locJa ? ' <span style="font-family:\'Noto Sans JP\',sans-serif;opacity:.4">' + locJa + '</span>' : ''} · Día ${d.num} de 15</div>
+            <div class="hoy-ds-sub">${locDisplay}${locJa ? ' <span style="font-family:\'Noto Sans JP\',sans-serif;opacity:.4">' + locJa + '</span>' : ''} · ${d.num === 0 ? 'Escala' : 'Día ' + d.num + ' de 15'}</div>
             <div class="hoy-ds-weather" id="hoy-weather-live">
               <span class="hoy-ds-weather-temp">${w.emoji} ${w.temp}</span>
               <span>${w.detail}</span>
