@@ -983,6 +983,88 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .dias-tag-free{background:rgba(105,219,124,.08);color:rgba(105,219,124,.55)}
 .dias-tag-nuevo{background:rgba(255,107,107,.12);color:rgba(255,107,107,.7);font-weight:600}
 
+/* ===================== HISTORIA TAB ===================== */
+.hist-wrap{max-width:780px;margin:0 auto;padding:0 1rem 3rem}
+.hist-hero{text-align:center;padding:2.5rem 0 1.5rem}
+.hist-hero h1{font-size:1.6rem;font-weight:800;margin:0 0 .5rem;color:var(--text)}
+.hist-hero p{font-size:.88rem;color:var(--text-muted);line-height:1.6;max-width:520px;margin:0 auto}
+.hist-toc{
+  margin:0 0 2rem;padding:18px 20px;border-radius:14px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);
+}
+.hist-toc-title{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.3);margin-bottom:12px}
+.hist-toc-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+@media(max-width:600px){.hist-toc-list{grid-template-columns:1fr}}
+.hist-toc-list a{
+  display:flex;align-items:baseline;gap:8px;
+  font-size:.82rem;color:var(--text-muted);text-decoration:none;
+  padding:6px 8px;border-radius:8px;transition:background .15s;
+}
+.hist-toc-list a:hover{background:rgba(255,255,255,.03)}
+.hist-toc-num{font-size:.72rem;font-weight:700;color:rgba(255,255,255,.2);min-width:18px}
+.hist-section{margin-bottom:2rem}
+.hist-section-head{
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  padding:14px 16px;border-radius:12px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);
+  transition:background .15s;user-select:none;
+}
+.hist-section-head:hover{background:rgba(255,255,255,.04)}
+.hist-section-num{
+  font-size:.7rem;font-weight:800;color:rgba(116,192,252,.5);
+  min-width:24px;text-align:center;
+}
+.hist-section-title{flex:1;font-size:.95rem;font-weight:700;color:var(--text)}
+.hist-section-era{font-size:.72rem;color:rgba(255,255,255,.25);font-weight:600}
+.hist-section-arrow{
+  font-size:.75rem;color:rgba(255,255,255,.2);transition:transform .2s;
+}
+.hist-section.open .hist-section-arrow{transform:rotate(90deg)}
+.hist-section-body{
+  display:none;padding:20px 16px 8px;
+  font-size:.88rem;line-height:1.75;color:var(--text-muted);
+}
+.hist-section.open .hist-section-body{display:block}
+.hist-section-body p{margin:0 0 1rem}
+.hist-section-body p:last-child{margin-bottom:0}
+.hist-term{
+  color:var(--accent-blue);font-weight:600;cursor:help;
+  border-bottom:1px dotted rgba(116,192,252,.25);
+}
+.hist-aside{
+  margin:1rem 0;padding:14px 16px;border-radius:10px;
+  background:rgba(116,192,252,.04);border-left:3px solid rgba(116,192,252,.15);
+  font-size:.82rem;line-height:1.6;color:var(--text-muted);
+}
+.hist-aside strong{color:var(--accent-blue)}
+.hist-timeline{
+  margin:1rem 0;padding:0;list-style:none;
+  border-left:2px solid rgba(255,255,255,.06);
+}
+.hist-timeline li{
+  padding:8px 0 8px 18px;position:relative;
+  font-size:.82rem;color:var(--text-muted);line-height:1.5;
+}
+.hist-timeline li::before{
+  content:'';position:absolute;left:-5px;top:14px;
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(116,192,252,.3);border:2px solid var(--bg);
+}
+.hist-timeline li strong{color:var(--text);font-weight:700}
+.hist-cities-tag{
+  display:inline-block;padding:2px 8px;border-radius:6px;
+  font-size:.72rem;font-weight:700;margin-right:4px;
+  background:rgba(255,212,59,.08);color:rgba(255,212,59,.6);
+}
+.hist-back-top{
+  display:block;margin:2rem auto 0;padding:10px 24px;
+  border-radius:10px;border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.02);color:var(--text-muted);
+  font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:background .15s;
+}
+.hist-back-top:hover{background:rgba(255,255,255,.04)}
+
 .dias-dc-highlight{
   font-size:.92rem;color:rgba(255,212,59,.85);margin-bottom:5px;line-height:1.4;
 }
@@ -1789,6 +1871,7 @@ if ('serviceWorker' in navigator) {
       <button class="tab-btn" data-tab="tools">💸 Gastos</button>
       <button class="tab-btn" data-tab="presupuesto">💰 Presupuesto</button>
       <button class="tab-btn" data-tab="glosario">📖 Glosario</button>
+      <button class="tab-btn" data-tab="historia">📜 Historia</button>
       <button class="tab-btn" data-tab="tips">📋 Tips</button>
     </nav>
   </div>
@@ -1854,6 +1937,11 @@ if ('serviceWorker' in navigator) {
 <div class="tab-panel" id="panel-guia">
   <div class="guia-reading-bar"><div class="guia-reading-fill" id="guia-reading-fill"></div></div>
   <div id="guia-v2-container"></div>
+</div>
+
+<!-- ==================== HISTORIA TAB ==================== -->
+<div class="tab-panel" id="panel-historia">
+  <div id="historia-container"></div>
 </div>
 
 <!-- ==================== TIPS TAB ==================== -->
@@ -6005,6 +6093,273 @@ function renderExpenses() {
   `;
 }
 
+// ===================== RENDER HISTORIA =====================
+function renderHistoria() {
+  const sections = [
+    {
+      num: '01',
+      title: 'Los orígenes: mitos, arroz y los primeros imperios',
+      era: 'hasta 710',
+      body: `<p>La historia de Japón empieza entre mitos y arqueología. Según la tradición, el archipiélago fue creado por dos dioses, Izanagi e Izanami, que removieron el océano con una lanza celestial: las gotas que cayeron formaron las islas. Su nieta, <span class="hist-term" title="Diosa del sol en la mitología japonesa. La familia imperial japonesa dice descender de ella.">Amaterasu</span> (la diosa del sol), envió a su nieto a gobernar la Tierra, y de su línea descendería el primer emperador humano, Jinmu, supuestamente en el año 660 a.C. Obviamente esto es mitología, pero importa porque <strong>la familia imperial japonesa sigue reclamando descender de Amaterasu hasta hoy</strong>, lo que la convierte en la monarquía más antigua del mundo (al menos en el relato oficial).</p>
+
+<p>En la realidad arqueológica, Japón estuvo habitado desde hace al menos 30.000 años. La cultura <span class="hist-term" title="Periodo prehistórico japonés (14.000-300 a.C.) famoso por su cerámica decorada con marcas de cuerdas. Una de las primeras culturas cerámicas del mundo.">Jōmon</span> (14.000-300 a.C.) fue una de las primeras del mundo en fabricar cerámica, y vivían de la caza, la pesca y la recolección. Hacia el 300 a.C. llegó del continente asiático la cultura <span class="hist-term" title="Periodo (300 a.C.-300 d.C.) que introdujo el cultivo del arroz en Japón, traído desde China/Corea.">Yayoi</span>, que trajo algo que cambiaría Japón para siempre: el cultivo del arroz. El arroz no era solo comida, era riqueza, impuestos y poder. Quien controlaba los arrozales controlaba la tierra.</p>
+
+<p>Para el siglo III-IV d.C., un clan del centro de Japón (la región de <span class="hist-term" title="Llanura donde se asienta la actual zona de Osaka-Nara-Kyoto. Fue el centro del poder político original de Japón.">Yamato</span>, cerca de la actual Nara) se había impuesto sobre los demás y estableció lo que llamamos el Estado Yamato. Estos son los antepasados directos de la actual familia imperial. Del continente llegaron también dos importaciones enormes: la escritura china (los <span class="hist-term" title="Caracteres de origen chino usados en la escritura japonesa. Cada uno representa un concepto o palabra. Japón adoptó miles de ellos.">kanji</span>, que Japón adoptó y adaptó) y el <span class="hist-term" title="Religión fundada en India por Buda (Siddhartha Gautama) hacia el siglo V a.C. Llegó a Japón en el siglo VI desde China y Corea.">budismo</span>, que llegó en el siglo VI desde Corea y China.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> En Nara (Día 8) pasarás cerca de donde empezó todo. El enorme templo Tōdai-ji que visitarás fue construido en 752 para proteger el estado con la fuerza del budismo. Los ciervos que andan libres por Nara eran considerados mensajeros divinos del <span class="hist-term" title="Religión autóctona de Japón basada en la veneración de espíritus de la naturaleza (kami). No tiene un fundador ni un libro sagrado.">sintoísmo</span>.</div>
+
+<p>El <strong>sintoísmo</strong> merece explicación aparte porque lo encontrarás en cada esquina de tu viaje. Es la religión original de Japón, y es muy diferente a lo que estamos acostumbrados en Europa. No tiene un fundador, ni un libro sagrado, ni un concepto claro de pecado. Se basa en la idea de que la naturaleza está llena de espíritus llamados <span class="hist-term" title="Espíritus o divinidades en el sintoísmo. Pueden habitar en montañas, ríos, árboles, rocas y hasta personas. Hay miles de ellos.">kami</span>: hay kami en las montañas, en los ríos, en los árboles viejos, en las rocas con formas raras, hasta en las personas excepcionales después de morir. Los <span class="hist-term" title="Puerta sagrada que marca la entrada a un espacio sintoísta. Suele ser de color rojo/naranja (torii bermellón).">torii</span> (esas puertas rojas icónicas) marcan la frontera entre el mundo ordinario y el espacio sagrado donde habita un kami. Los santuarios sintoístas (<span class="hist-term" title="Santuario sintoísta. Se distingue de un templo budista (tera/ji) por los torii y la cuerda sagrada (shimenawa).">jinja</span>) son los lugares con torii y cuerdas sagradas; los templos budistas (<span class="hist-term" title="Templo budista. Se reconoce por las pagodas, estatuas de Buda y quemadores de incienso.">tera/ji</span>) son los que tienen pagodas y estatuas de Buda.</p>
+
+<p>Lo fascinante es que los japoneses nunca vieron problema en practicar ambas religiones a la vez. Puedes nacer con una ceremonia sintoísta, casarte en una iglesia cristiana (por estética, no por fe) y que te hagan un funeral budista, y nadie ve ninguna contradicción. Esta flexibilidad religiosa es una de las claves para entender la cultura japonesa.</p>`
+    },
+    {
+      num: '02',
+      title: 'Nara y Heian: la corte de los poetas',
+      era: '710 – 1185',
+      body: `<p>En 710, Japón estableció su primera capital permanente en <strong>Nara</strong>, modelada como una copia en miniatura de la capital china Chang'an. Todo lo chino era lo más moderno y sofisticado: el sistema legal, la burocracia, la arquitectura, la escritura. Pero Japón nunca fue una simple copia: tomaba lo que le interesaba de China y lo adaptaba a su manera. Esta capacidad de absorber influencias externas y transformarlas en algo propio es un patrón que se repite constantemente en la historia japonesa.</p>
+
+<p>En 794 la capital se trasladó a <span class="hist-term" title="Nombre antiguo de Kyoto, que significa 'capital de la paz'. Fue capital de Japón durante más de mil años (794-1868).">Heian-kyō</span> (la actual <strong>Kyoto</strong>), y así empezó el periodo Heian, que duró casi 400 años y es considerado la edad dorada de la cultura japonesa clásica. La corte imperial era un mundo cerrado, obsesionado con la belleza y el refinamiento. Los nobles se juzgaban entre sí por su caligrafía, su habilidad para componer poemas, la combinación de colores de las capas de su kimono y la calidad de los perfumes que usaban.</p>
+
+<p>Fue en esta época cuando se escribió el <span class="hist-term" title="Novela escrita hacia el año 1000 por Murasaki Shikibu, una dama de la corte. Cuenta la vida amorosa del príncipe Genji. Se considera la primera novela de la historia.">Genji Monogatari</span> (La Historia de Genji), considerada la primera novela de la historia mundial, escrita hacia el año 1000 por <strong>Murasaki Shikibu</strong>, una mujer de la corte. También fue una mujer, <strong>Sei Shōnagon</strong>, quien escribió <em>El libro de la almohada</em>, un diario íntimo lleno de listas, opiniones y observaciones de la vida cortesana. Que las dos grandes obras literarias de la época fueran escritas por mujeres no es casualidad: los hombres escribían en chino (considerado el idioma serio), mientras que las mujeres escribían en japonés, que paradójicamente resultó ser el vehículo de la literatura más importante.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> Kyoto (Días 8-11) ES la antigua Heian-kyō. El Fushimi Inari (Día 9) con sus miles de torii rojos existe desde el año 711. Cuando camines por el <span class="hist-term" title="Camino del Filósofo, un paseo de 2km junto a un canal en Kyoto. Recibe su nombre del filósofo Nishida Kitaro, que lo recorría meditando.">Camino del Filósofo</span> (Día 9) o pasees por Arashiyama (Día 11), estás pisando los mismos caminos por donde paseaban los nobles Heian hace mil años, contemplando los mismos <span class="hist-term" title="Tradición de contemplar las hojas de otoño que cambian de color. Se practica desde el periodo Heian (siglo VIII). Momiji = arce japonés.">momiji</span> (arces de otoño).</div>
+
+<p>Pero mientras la corte se dedicaba a la poesía y el refinamiento, en las provincias estaba surgiendo una clase social que cambiaría Japón: los guerreros. La corte imperial necesitaba que alguien mantuviera el orden en las tierras lejanas, y esa tarea recayó en familias militares locales. Estos guerreros fueron acumulando poder real mientras la corte retenía el poder simbólico. Es como si en España los Reyes Católicos hubieran seguido reinando nominalmente, pero el poder real lo ejercieran los generales de cada región.</p>`
+    },
+    {
+      num: '03',
+      title: 'Samurái: la espada gobierna Japón',
+      era: '1185 – 1600',
+      body: `<p>En 1185, después de una guerra civil brutal entre dos clanes guerreros (los Taira y los Minamoto), el vencedor, <strong>Minamoto no Yoritomo</strong>, estableció un gobierno militar en Kamakura, lejos de la refinada corte de Kyoto. El emperador seguía existiendo, pero era una figura decorativa. El poder real estaba en manos del <span class="hist-term" title="Literalmente 'general supremo que somete a los bárbaros'. En la práctica, el dictador militar de Japón. El emperador le delegaba el poder real.">shōgun</span> (generalísimo). Este sistema de gobierno militar duró, con variaciones, casi 700 años.</p>
+
+<p>Los <span class="hist-term" title="Guerrero de la clase militar japonesa. Literalmente significa 'el que sirve'. Seguían un código de honor llamado bushidō.">samurái</span> eran la clase guerrera que servía al shōgun y a los señores locales. La palabra significa literalmente "el que sirve". Con el tiempo desarrollaron un código de conducta llamado <span class="hist-term" title="'El camino del guerrero'. Código ético de los samurái que enfatizaba la lealtad, el honor, la disciplina y la disposición a morir por su señor.">bushidō</span> (el camino del guerrero), que valoraba la lealtad absoluta, el honor, la disciplina y la disposición a morir antes que ser deshonrado. No era tan romántico como suena: en la práctica, las traiciones y cambios de bando eran frecuentes, pero el ideal del bushidō marcó profundamente la cultura japonesa.</p>
+
+<p>El periodo de Kamakura también vio la llegada del <span class="hist-term" title="Escuela budista que enfatiza la meditación sentada (zazen) como camino a la iluminación. Tuvo gran influencia en la cultura japonesa: ceremonia del té, jardines, artes marciales.">budismo zen</span>, traído de China. El zen, con su énfasis en la meditación, la simplicidad y la búsqueda de la verdad a través de la experiencia directa (no de libros), caló hondo en la mentalidad samurái y moldeó gran parte de la estética japonesa que conocemos: los jardines de roca, la ceremonia del té, el <span class="hist-term" title="Concepto estético japonés que encuentra belleza en la imperfección, la transitoriedad y la incompletitud. Influye en el arte, la arquitectura y la filosofía de vida.">wabi-sabi</span> (la belleza de lo imperfecto y transitorio), el arte del arreglo floral (<span class="hist-term" title="Arte japonés del arreglo floral. Usa pocas flores dispuestas siguiendo principios de asimetría y espacio vacío.">ikebana</span>).</p>
+
+<p>A partir de 1467, Japón se sumió en un siglo de guerra civil casi continua, el periodo <span class="hist-term" title="'El país en guerra'. Periodo (1467-1615) de guerras civiles constantes entre señores feudales (daimyō). Se construyeron más de 5.000 castillos.">Sengoku</span> ("el país en guerra"). Imagina España durante la Reconquista, pero comprimida en un archipiélago: cientos de señores feudales (<span class="hist-term" title="Señor feudal japonés. Controlaba un territorio y tenía samurái a su servicio. En el periodo Sengoku había cientos luchando entre sí.">daimyō</span>) luchando entre sí, alianzas que cambiaban constantemente, castillos construidos por todas partes (más de 5.000). Los tres unificadores de Japón son figuras legendarias:</p>
+
+<ul class="hist-timeline">
+<li><strong>Oda Nobunaga</strong> (1534-1582): El primero en usar armas de fuego masivamente (traídas por los portugueses en 1543). Cruel y brillante. Controló un tercio de Japón antes de ser traicionado por uno de sus generales.</li>
+<li><strong>Toyotomi Hideyoshi</strong> (1537-1598): De origen campesino, completó la unificación. Prohibió que los campesinos tuvieran armas e invadió Corea dos veces (ambas fallidas). La cerámica coreana que sus tropas trajeron como botín influyó enormemente en la cerámica japonesa.</li>
+<li><strong>Tokugawa Ieyasu</strong> (1543-1616): El más paciente. Ganó la batalla decisiva de Sekigahara en 1600 y fundó el shogunato Tokugawa, que gobernaría Japón durante 265 años.</li>
+</ul>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> El castillo de <strong>Matsumoto</strong> (Día 6) es uno de los pocos castillos originales que sobrevivieron — la mayoría fueron destruidos o reconstruidos en hormigón. Fue construido en pleno periodo Sengoku. El <strong>castillo de Osaka</strong> (Día 14, opción 🆕) fue la fortaleza de Hideyoshi, aunque el edificio actual es una reconstrucción de 1931.</div>`
+    },
+    {
+      num: '04',
+      title: 'Edo: 265 años de paz cerrada',
+      era: '1603 – 1868',
+      body: `<p>En 1603, Tokugawa Ieyasu recibió el título de shōgun y estableció su capital en <span class="hist-term" title="Nombre antiguo de Tokyo. Significa 'puerta de la bahía'. Un pequeño pueblo pesquero que los Tokugawa transformaron en la mayor ciudad del mundo.">Edo</span> (la actual <strong>Tokyo</strong>). Lo que siguió fue uno de los periodos de paz más largos de la historia mundial: 265 años sin guerras significativas. Para lograrlo, los Tokugawa crearon un sistema de control social extraordinario.</p>
+
+<p>Primero, cerraron Japón al mundo exterior. A partir de 1639, el <span class="hist-term" title="Política de aislamiento de Japón (1639-1853). Prohibía casi todo contacto con el exterior. Solo los holandeses podían comerciar, desde una isla artificial en Nagasaki.">sakoku</span> (país cerrado) prohibió casi todo contacto con extranjeros. Los japoneses no podían salir del país (pena de muerte si lo intentaban), y los únicos europeos autorizados a comerciar eran los holandeses, confinados en una isla artificial en Nagasaki. El cristianismo fue prohibido y perseguido brutalmente.</p>
+
+<p>Segundo, establecieron una rígida jerarquía social de cuatro clases: samurái (clase dirigente), campesinos (los que producían la comida), artesanos y comerciantes (los más bajos teóricamente, aunque muchos se hicieron ricos). El sistema <span class="hist-term" title="Sistema que obligaba a los daimyō a pasar un año en Edo (Tokyo) y otro en su feudo, alternando. Sus familias se quedaban en Edo como rehenes. Esto gastaba sus fortunas y evitaba rebeliones.">sankin-kōtai</span> obligaba a todos los daimyō a pasar un año de cada dos en Edo, con sus familias permanentemente allí como rehenes. Esto tenía un doble efecto brillante: los daimyō gastaban fortunas en viajes y en mantener residencias en Edo (no podían acumular riqueza para rebelarse), y las rutas entre Edo y las provincias se llenaban de tráfico, creando una red de caminos, posadas y pueblos de etapa.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> El <span class="hist-term" title="Ruta histórica de 534 km entre Kyoto y Edo (Tokyo) que atravesaba el interior montañoso. Tenía 69 estaciones de descanso. Hoy se pueden caminar tramos conservados.">Nakasendo</span> que caminarás entre Magome y Tsumago (Días 6-7) era exactamente una de estas rutas del sankin-kōtai. Las posadas del valle del Kiso por donde pasarás son las mismas donde paraban los daimyō y sus enormes séquitos de samurái. El tramo que harás conserva el empedrado original y las aldeas casi tal como estaban hace 400 años.</div>
+
+<p>Paradójicamente, estos siglos de paz y aislamiento fueron increíblemente creativos. Sin guerras que luchar, los samurái se convirtieron en burócratas y se dedicaron a las artes. Floreció el <span class="hist-term" title="Teatro tradicional japonés muy estilizado, con vestuario elaborado, maquillaje dramático (kumadori) y movimientos ritualizados. Solo actúan hombres. Los actores que hacen de mujer se llaman onnagata.">kabuki</span> (el teatro popular con maquillaje dramático y vestuario espectacular), el <span class="hist-term" title="Arte de la marioneta japonesa con muñecos de medio cuerpo manejados por tres titiriteros vestidos de negro. Se considera tan sofisticado como el kabuki.">bunraku</span> (teatro de marionetas), el <span class="hist-term" title="Estampa japonesa grabada en madera. La Gran Ola de Kanagawa de Hokusai es el ejemplo más famoso. Influenciaron enormemente al impresionismo europeo.">ukiyo-e</span> (las famosas estampas japonesas que luego inspiraron a los impresionistas europeos — La Gran Ola de Hokusai es de esta época). Las <span class="hist-term" title="Artistas del entretenimiento tradicional japonés: danza, música, conversación. Se forman desde jóvenes en okiya (casas de geisha). No son prostitutas. En Kyoto se llaman geiko.">geisha</span> (que son artistas del entretenimiento, no prostitutas: dominan la danza, la música, la conversación ingeniosa) surgieron como profesión formal. La ceremonia del té se codificó como un arte. Se inventó el sushi (originalmente era pescado fermentado sobre arroz, muy diferente al sushi actual).</p>
+
+<p>En los barrios populares de Edo surgieron los <span class="hist-term" title="Callejones estrechos con pequeños bares y restaurantes. Originalmente eran mercados negros de posguerra. Los de Shinjuku (Golden Gai, Omoide Yokocho) son los más famosos.">yokocho</span> (callejones de tabernas), los <span class="hist-term" title="Casas de baño públicas donde la gente se bañaba, socializaba y se relajaba. Eran el centro social del barrio. Hoy sobreviven algunos en Tokyo.">sentō</span> (casas de baño comunitarias) y una vibrante cultura de calle que en muchos sentidos es la antepasada directa de la cultura pop japonesa actual. Tokyo en el periodo Edo ya tenía más de un millón de habitantes, haciéndola la ciudad más grande del mundo.</p>`
+    },
+    {
+      num: '05',
+      title: 'La revolución Meiji: de samurái a potencia mundial',
+      era: '1868 – 1912',
+      body: `<p>En 1853, cuatro barcos de guerra estadounidenses al mando del comodoro Matthew Perry entraron en la bahía de Edo y exigieron que Japón abriera sus puertos al comercio. Los japoneses no tenían nada con qué responder: después de dos siglos de aislamiento, sus armas eran de la época de los mosquetes mientras los americanos tenían cañones de vapor. La humillación fue total.</p>
+
+<p>El shock provocó una crisis interna. Clanes del sur de Japón (Satsuma y Chōshū, de las zonas de Kagoshima y Yamaguchi) se rebelaron contra el shogunato, usando como bandera la restauración del poder imperial. En 1868, el último shōgun Tokugawa entregó el poder y un joven emperador de 15 años, <span class="hist-term" title="Emperador de Japón (1868-1912). Bajo su reinado, Japón pasó de ser un país feudal cerrado a una potencia industrial y militar moderna. 'Meiji' significa 'gobierno iluminado'.">Meiji</span> ("gobierno iluminado"), fue proclamado como gobernante supremo. En la práctica, gobernaba un grupo de oligarcas de los clanes victoriosos, pero usaban al emperador como símbolo de unidad nacional.</p>
+
+<p>Lo que siguió fue posiblemente la transformación más rápida y radical que ha experimentado ningún país en la historia. En apenas 40 años, Japón pasó de ser una sociedad feudal con samurái y espadas a una potencia industrial con trenes, telégrafos, fábricas, un ejército moderno y una constitución. El método era simple y pragmático: enviar misiones a Europa y América para estudiar qué hacía mejor cada país, y copiarlo. La marina se modeló según la británica, el ejército según el prusiano, el sistema legal según el francés, la educación según el americano.</p>
+
+<p>Se abolió la clase samurái (recibieron pensiones y algunos se reconvirtieron en empresarios o burócratas), se implantó la educación obligatoria, se construyó una red ferroviaria, se adoptó el calendario occidental y hasta se promovió comer carne (antes era tabú por influencia budista). El <span class="hist-term" title="Plato de carne de ternera cocida en una olla con salsa dulce de soja, verduras y tofu. Curiosamente, se popularizó en la era Meiji como símbolo de modernización occidental.">sukiyaki</span> (carne cocida en salsa dulce) se convirtió en símbolo de modernidad. La capital se trasladó de Kyoto a Tokyo (literalmente "capital del este") y Edo fue rebautizada.</p>
+
+<p>Japón no solo se modernizó internamente: también se convirtió en potencia imperial. Derrotó a China en 1895 y, lo que asombró al mundo, a Rusia en 1905. Era la primera vez que un país asiático vencía a una potencia europea en una guerra moderna. Japón colonizó Taiwán, Corea y partes de China.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> Tokyo es una ciudad esencialmente Meiji y posterior: el viejo Edo desapareció en terremotos e incendios. La estación de Tokyo (que verás el Día 1) fue construida en 1914 con estilo europeo, símbolo de la modernización. Muchos barrios como Yanesen (Día 2) conservan ese ambiente de transición entre el viejo Edo y la modernización.</div>`
+    },
+    {
+      num: '06',
+      title: 'Guerras mundiales y destrucción',
+      era: '1912 – 1945',
+      body: `<p>Tras la muerte del emperador Meiji en 1912, Japón entró en el periodo <span class="hist-term" title="Periodo del emperador Taishō (1912-1926). Breve era de democracia parlamentaria y apertura cultural, conocida como la 'democracia Taishō'.">Taishō</span>, una breve era de democracia relativa y cultura cosmopolita: jazz, cafés, <span class="hist-term" title="Cafeterías de estilo retro japonés que surgieron en la era Taishō/Shōwa. Servían café filtrado a mano en un ambiente tranquilo con música clásica. Algunos sobreviven hoy en barrios como Yanesen.">kissaten</span> (cafeterías de estilo europeo donde se servía café filtrado mientras sonaba música clásica), moda occidental. Pero las corrientes militaristas fueron ganando fuerza.</p>
+
+<p>Con el emperador <span class="hist-term" title="Emperador de Japón (1926-1989). Su reinado abarcó la expansión militar, la Segunda Guerra Mundial, la derrota, la ocupación americana y el milagro económico. Su papel real durante la guerra sigue siendo debatido.">Hirohito</span> (periodo Shōwa, desde 1926), los militares tomaron el control efectivo del gobierno. Japón invadió Manchuria (China) en 1931, masacró a la población civil de Nanjing en 1937 (uno de los peores crímenes de guerra del siglo XX), y finalmente atacó Pearl Harbor en diciembre de 1941, entrando en la Segunda Guerra Mundial contra Estados Unidos.</p>
+
+<p>La guerra fue devastadora. Los bombardeos americanos arrasaron las ciudades japonesas: Tokyo fue bombardeada con bombas incendiarias en marzo de 1945, matando a más de 100.000 personas en una sola noche (más que en Hiroshima). Osaka, Kobe y la mayoría de ciudades industriales fueron destruidas. Solo Kyoto se salvó, supuestamente porque el secretario de guerra americano Henry Stimson la conocía y valoraba su patrimonio cultural (aunque hay debate sobre los motivos reales).</p>
+
+<p>El 6 de agosto de 1945, Estados Unidos lanzó la primera bomba atómica sobre Hiroshima. Tres días después, la segunda sobre Nagasaki. El 15 de agosto, el emperador Hirohito habló por radio por primera vez en la historia (la población nunca había oído su voz) para anunciar la rendición. Muchos japoneses ni siquiera entendieron el comunicado porque el emperador habló en un japonés cortesano arcaico que la gente común no conocía.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> Kyoto (Días 8-11) conserva su patrimonio precisamente por no haber sido bombardeada. En contraste, la mayor parte de Tokyo y Osaka son reconstrucciones de posguerra. Los yokocho de Shinjuku como <strong>Golden Gai</strong> y <strong>Omoide Yokocho</strong> (Día 3, opciones 🆕) empezaron como mercados negros de posguerra donde la gente compraba comida de estraperlo.</div>`
+    },
+    {
+      num: '07',
+      title: 'Posguerra y milagro económico',
+      era: '1945 – 1990',
+      body: `<p>La ocupación americana (1945-1952), dirigida por el general Douglas MacArthur, transformó Japón de nuevo. Se escribió una nueva constitución (básicamente la escribieron los americanos en una semana) que incluía el famoso <strong>Artículo 9</strong>, que renuncia a la guerra y prohíbe tener ejército ofensivo. El emperador pasó de ser un dios viviente a un "símbolo del Estado" sin poder político. Se dio el voto a las mujeres, se reformó la educación y se desmontaron los grandes conglomerados industriales (temporalmente, porque luego se reconstituyeron como <span class="hist-term" title="Grandes conglomerados empresariales japoneses como Mitsubishi, Mitsui, Sumitomo. Herederos de los zaibatsu prebélicos, conectan bancos, industria y comercio.">keiretsu</span>).</p>
+
+<p>Y entonces vino el <strong>milagro económico</strong>. Entre 1955 y 1990, Japón experimentó un crecimiento sostenido que lo convirtió en la segunda economía del mundo (después de Estados Unidos). De las cenizas de la guerra surgieron Sony, Toyota, Honda, Panasonic, Nintendo. Los mismos japoneses que habían fabricado aviones de guerra ahora fabricaban televisores, coches y cámaras que conquistaron el mercado mundial.</p>
+
+<p>¿Cómo fue posible? Una combinación de factores: una población muy educada y disciplinada, una cultura corporativa que premiaba el trabajo en equipo y la lealtad a la empresa (el famoso <span class="hist-term" title="Sistema de empleo 'de por vida' en grandes empresas japonesas. El trabajador entraba después de la universidad y se jubilaba en la misma empresa. A cambio, obtenía seguridad total.">empleo vitalicio</span>), un gobierno que dirigía la inversión hacia sectores estratégicos (el MITI, Ministerio de Comercio Internacional, era como un cerebro económico central), la guerra de Corea (1950-53) que generó una enorme demanda de productos japoneses, y la protección militar americana que permitía a Japón gastar poco en defensa.</p>
+
+<p>Los años 80 fueron la cima de la euforia. El yen subió, las empresas japonesas compraron propiedades emblemáticas en el mundo (el Rockefeller Center de Nueva York, estudios de cine en Hollywood), y los terrenos del Palacio Imperial en Tokyo supuestamente valían más que toda California. Los salarymen (empleados de oficina en traje) trabajaban hasta la extenuación y luego se iban a beber con sus jefes a los yokocho. Era habitual no volver a casa y dormir en <span class="hist-term" title="Hoteles cápsula: alojamiento ultracompacto donde cada huésped duerme en un tubo con TV y despertador. Inventados en 1979, originalmente para salarymen que perdían el último tren.">hoteles cápsula</span> (inventados en 1979 para los que perdían el último tren).</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> El <span class="hist-term" title="Tren bala japonés. El primero se inauguró en 1964 para los Juegos Olímpicos de Tokyo. Conecta las principales ciudades a velocidades de hasta 320 km/h. Famoso por su puntualidad extrema.">shinkansen</span> (tren bala) que usarás entre Tokyo y Kyoto se inauguró en 1964 para los Juegos Olímpicos, símbolo del Japón tecnológico. Los yokocho de Shinjuku, las calles de Akihabara, los barrios de neón de Osaka — todo ese paisaje urbano vibrante que vas a ver es hijo directo del boom económico de posguerra.</div>`
+    },
+    {
+      num: '08',
+      title: 'La burbuja, la crisis y el Japón actual',
+      era: '1990 – hoy',
+      body: `<p>En 1990, la burbuja estalló. Los precios inmobiliarios y bursátiles se desplomaron (el índice Nikkei perdió más de la mitad de su valor). Lo que siguió se conoce como la <span class="hist-term" title="Periodo de estancamiento económico en Japón desde principios de los 90. Se le llama así porque fue una década (que acabó siendo más de dos) de crecimiento casi nulo.">Década Perdida</span>, que en realidad fueron dos o tres décadas de estancamiento. Japón nunca recuperó el dinamismo de los 80.</p>
+
+<p>Al problema económico se sumó una <strong>crisis demográfica</strong> que hoy es la más grave del mundo desarrollado. La tasa de natalidad cayó por debajo del nivel de reemplazo y la población empezó a envejecer rápidamente. Hoy Japón tiene 125 millones de habitantes, pero pierde unas 500.000 personas al año. Las proyecciones dicen que para 2060 podría tener solo 86 millones. Pueblos enteros se están quedando vacíos: en zonas rurales hay casas abandonadas que el gobierno casi regala. Esto explica en parte la tranquilidad de lugares como el Valle del Kiso que caminarás.</p>
+
+<p>Políticamente, Japón ha estado dominado casi ininterrumpidamente por el <span class="hist-term" title="Partido Liberal Democrático. A pesar de su nombre, es conservador. Ha gobernado Japón de forma casi continua desde 1955, con solo breves interrupciones.">PLD</span> (Partido Liberal Democrático), un partido conservador, desde 1955. Es una democracia parlamentaria donde el primer ministro es el jefe de gobierno y el emperador es una figura ceremonial. El actual emperador <span class="hist-term" title="Emperador de Japón desde 2019. Su era se llama Reiwa ('bella armonía'). Es el 126º emperador según la cuenta tradicional.">Naruhito</span> (desde 2019, era Reiwa) es querido pero no tiene poder real. Japón mantiene unas "Fuerzas de Autodefensa" que en la práctica son un ejército potente, aunque el Artículo 9 sigue generando debate sobre hasta dónde puede llegar su capacidad militar.</p>
+
+<p>Culturalmente, el Japón actual es una fascinante mezcla de tradición y modernidad extrema. Conviven templos del siglo VIII con rascacielos futuristas, santuarios sintoístas con tiendas de manga y anime, rituales tea zen con la cultura del <span class="hist-term" title="Famoso cruce de Shibuya en Tokyo donde hasta 3.000 personas cruzan a la vez cuando el semáforo se pone verde. Símbolo de la intensidad urbana de Tokyo.">cruce de Shibuya</span>. Los japoneses pueden ser extremadamente formales y a la vez profundamente excéntricos: el país que inventó el protocolo empresarial más rígido del mundo es el mismo que creó los cat cafés, los hoteles cápsula temáticos y las máquinas expendedoras de ramen caliente.</p>
+
+<p>El turismo ha explotado tras la pandemia. El yen débil (comparado con los máximos históricos) ha hecho de Japón un destino asequible para europeos y americanos. Esto es exactamente lo que estáis aprovechando vosotros: vuestra visita coincide con un momento en que el cambio de divisa os favorece enormemente.</p>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> El contraste entre el Japón tradicional (Kyoto, Nara, Valle del Kiso) y el Japón ultramoderno (Akihabara, Shibuya, Dotonbori en Osaka) es uno de los mayores atractivos del viaje. No son dos Japones distintos: son el mismo país viviendo cómodamente en ambos mundos.</div>`
+    },
+    {
+      num: '09',
+      title: 'Cómo funciona Japón: política y sociedad',
+      era: '',
+      body: `<p>Japón es una <strong>monarquía constitucional parlamentaria</strong>. El emperador es el "símbolo del Estado y de la unidad del pueblo" pero no tiene poder político: no puede vetar leyes, ni dirigir el gobierno, ni siquiera expresar opiniones políticas públicamente. Es básicamente como las monarquías europeas pero llevado aún más lejos. El emperador realiza ceremonias sintoístas, recibe a dignatarios extranjeros y es el calendario vivo del país: cada emperador da nombre a una era (ahora estamos en la era <span class="hist-term" title="Era del emperador Naruhito, que comenzó en 2019. Significa 'bella armonía'. Los documentos oficiales japoneses usan este calendario además del occidental.">Reiwa</span>, "bella armonía", desde 2019).</p>
+
+<p>El gobierno lo dirige el <strong>primer ministro</strong>, elegido por la Dieta (el parlamento japonés, que tiene dos cámaras). En la práctica, el PLD gana casi siempre y el primer ministro es el líder de la facción dominante dentro del partido. Las facciones internas del PLD son casi como partidos dentro del partido, y los cambios de primer ministro suelen reflejar luchas internas más que cambios ideológicos.</p>
+
+<p>La sociedad japonesa se organiza en torno a varios conceptos clave que conviene entender:</p>
+
+<ul class="hist-timeline">
+<li><strong><span class="hist-term" title="Concepto de vergüenza, humildad y dignidad social. El miedo a perder la cara (vergüenza pública) es un motivador social fortísimo en Japón.">Honne y tatemae</span></strong> — Quizá el concepto más importante. <em>Honne</em> son tus sentimientos reales; <em>tatemae</em> es la cara que muestras al público. Todos los humanos hacemos esto, pero en Japón está extremadamente codificado. Un japonés puede estar furioso contigo y seguir sonriendo amablemente. No es hipocresía: es lubricante social en una sociedad muy densa donde evitar el conflicto directo es esencial.</li>
+<li><strong><span class="hist-term" title="Sentido del deber y la obligación social. Sentirse en deuda con alguien por un favor, y la obligación de devolver esa deuda.">Giri</span></strong> — Obligación social y sentido del deber. Si alguien te hace un favor, tienes una deuda que algún día deberás devolver. Todo el sistema de regalos, cortesías y reciprocidad gira en torno a esto.</li>
+<li><strong><span class="hist-term" title="'Leer el ambiente'. Capacidad muy valorada en Japón de percibir la atmósfera de una situación sin que nadie te diga nada explícitamente. Lo contrario (KY, kuuki yomenai, 'no saber leer el ambiente') se considera un defecto social.">Kuuki wo yomu</span></strong> — "Leer el ambiente". La capacidad de entender qué está pasando sin que nadie te lo diga explícitamente. En Japón se espera que captes las señales no verbales. Ser <em>KY</em> (kuuki yomenai, "no saber leer el ambiente") es uno de los peores defectos sociales.</li>
+<li><strong>El grupo sobre el individuo</strong> — El famoso proverbio "el clavo que sobresale recibe el martillazo" (<span class="hist-term" title="'El clavo que sobresale recibe el martillazo'. Proverbio japonés que refleja la presión social para no destacar del grupo.">deru kugi wa utareru</span>) resume la presión social por encajar. Esto tiene su lado positivo (trabajo en equipo, sociedad segura y ordenada) y negativo (conformismo, dificultad para los que son diferentes).</li>
+</ul>
+
+<div class="hist-aside"><strong>🎒 Consejo práctico:</strong> Como turista, no se espera que domines estos códigos. Los japoneses son muy conscientes de que los extranjeros no conocen sus normas y generalmente son pacientes y amables. Lo más importante: respeta las colas, no hables alto en el tren, quítate los zapatos cuando lo indiquen, y un intento torpe de decir "arigatō gozaimasu" (gracias) vale más que un silencio perfecto.</div>`
+    },
+    {
+      num: '10',
+      title: 'Las religiones de Japón: sintoísmo y budismo',
+      era: '',
+      body: `<p>Si vienes de España, donde la religión fue históricamente una cosa seria de "o esto o lo otro", Japón te va a sorprender. Los japoneses practican dos religiones principales simultáneamente y no ven ningún problema en ello. Según las estadísticas, Japón tiene unos 80 millones de sintoístas y unos 67 millones de budistas… pero solo tiene 125 millones de habitantes. Las cuentas no cuadran porque la misma persona se cuenta en ambos.</p>
+
+<p>El <strong>sintoísmo</strong> (literalmente "el camino de los kami") es la religión autóctona. Como hemos visto, se basa en los kami, espíritus que habitan en la naturaleza. No tiene dogma, ni mandamientos, ni concepto de pecado en el sentido cristiano. Se centra en la pureza (física y ritual), la armonía con la naturaleza y el respeto a los antepasados. Los rituales sintoístas marcan los momentos alegres de la vida: nacimientos, bodas, festivales (<span class="hist-term" title="Festivales tradicionales japoneses. Hay miles a lo largo del año. Suelen incluir procesiones con santuarios portátiles (mikoshi), música, bailes y puestos de comida.">matsuri</span>), año nuevo.</p>
+
+<p>El <strong>budismo</strong> japonés tiene muchas escuelas diferentes. Las más importantes que encontrarás en tu viaje son: el <strong>zen</strong> (meditación y jardines minimalistas, muy presente en Kyoto), el <strong>budismo de Tierra Pura</strong> (la escuela más popular, que promete renacer en un paraíso si recitas el nombre de Buda Amida — muchos templos grandes pertenecen a esta escuela) y el <strong>budismo Shingon</strong> (esotérico, con rituales elaborados). El budismo se ocupa de los momentos solemnes: funerales, duelo, reflexión sobre la muerte.</p>
+
+<p><strong>Cómo distinguir un santuario sintoísta de un templo budista</strong> (algo que confunde a muchos turistas):</p>
+
+<ul class="hist-timeline">
+<li><strong>Santuario sintoísta (jinja):</strong> Tiene torii (puertas rojas/naranjas), shimenawa (cuerdas sagradas con zigzag de papel blanco), komainu (estatuas de leones-perros guardianes). Se purifica uno lavándose las manos y la boca en la fuente de la entrada. Se reza con dos palmadas.</li>
+<li><strong>Templo budista (tera/ji):</strong> Tiene una puerta grande con figuras guardianas feroces (niōmon), pagodas, estatuas de Buda, quemadores de incienso. Se reza con las manos juntas en silencio, sin palmadas.</li>
+<li><strong>La excepción:</strong> Muchos lugares mezclan ambos. Encontrarás torii en templos budistas y elementos budistas en santuarios sintoístas. Durante siglos estuvieron oficialmente fusionados, y aunque se separaron por ley en la era Meiji, las mezclas persisten.</li>
+</ul>
+
+<div class="hist-aside"><strong>📍 Lo que verás en tu viaje:</strong> Fushimi Inari (Día 9) es el ejemplo perfecto de santuario sintoísta: miles de torii dedicados al kami Inari (del arroz y los negocios). Tōdai-ji en Nara (Día 8) es budismo puro: el Gran Buda de bronce de 15 metros. Senso-ji en Tokyo (Día 4, Asakusa) es un templo budista. Meiji Jingū (Día 2, opción 🆕) es sintoísta, dedicado al emperador Meiji. Fíjate en las diferencias cuando los visites.</div>`
+    },
+    {
+      num: '11',
+      title: 'Las ciudades de tu viaje: breve retrato',
+      era: '',
+      body: `<p>Cada ciudad japonesa tiene su propia personalidad. Aquí van las que visitaréis:</p>
+
+<p><span class="hist-cities-tag">TOKYO</span> <strong>Tokyo</strong> (Días 1-5) — 14 millones de habitantes (38 millones en el área metropolitana, la mayor del mundo). No es una ciudad con un centro claro, sino una galaxia de barrios, cada uno con su carácter. <strong>Shinjuku</strong> es el nodo de transporte más brutal del mundo (3,5 millones de personas pasan por su estación cada día) con sus rascacielos y sus yokocho. <strong>Shibuya</strong> es el cruce peatonal más famoso del mundo y el epicentro de la moda joven. <strong>Asakusa</strong> es el Tokyo castizo, con Senso-ji y ambiente retro. <strong>Akihabara</strong> es la meca del manga, anime y electrónica. <strong>Yanesen</strong> (que visitaréis el Día 2) es uno de los pocos barrios que sobrevivió a los bombardeos, con templos pequeños, casitas de madera y gatos callejeros. Tokyo no tiene la belleza clásica de Kyoto: su belleza está en su energía caótica, sus capas superpuestas de historia y su capacidad para reinventarse constantemente.</p>
+
+<p><span class="hist-cities-tag">MATSUMOTO</span> <strong>Matsumoto</strong> (Día 6) — Ciudad de montaña en los Alpes japoneses, famosa por su castillo negro del siglo XVI (uno de los pocos originales). Más tranquila y fría que Tokyo, con una escena artística sorprendente para su tamaño. Es la puerta al Nakasendo y a los Alpes japoneses.</p>
+
+<p><span class="hist-cities-tag">VALLE DEL KISO</span> <strong>Magome y Tsumago</strong> (Días 6-7) — No son ciudades sino aldeas-museo del periodo Edo, conectadas por el tramo más famoso del Nakasendo. Casas de madera oscura, faroles de papel, cero coches, cero neón. Si Japón tuviera algo equivalente a un pueblo medieval español perfectamente conservado, sería esto. Magome está en pendiente (más abierto), Tsumago es llano (más cerrado e íntimo).</p>
+
+<p><span class="hist-cities-tag">KYOTO</span> <strong>Kyoto</strong> (Días 8-11) — 1,5 millones de habitantes. La antigua capital durante mil años. 2.000 templos, 17 sitios Patrimonio de la Humanidad. Si Tokyo es el Japón del futuro, Kyoto es el Japón de la memoria. El barrio de <strong>Gion</strong> es donde aún puedes cruzarte con una <span class="hist-term" title="En Kyoto, las geisha se llaman geiko y las aprendices maiko. Gion es el barrio tradicional donde viven y trabajan.">maiko</span> (aprendiz de geiko/geisha) caminando hacia su cita de trabajo. <strong>Arashiyama</strong> (Día 11) es el bosque de bambú y el puente sobre el río que los nobles Heian ya contemplaban. <strong>Fushimi</strong> es el santuario de los mil torii. La ciudad puede parecer turística en los puntos principales, pero basta salirse dos calles para encontrar un Kyoto silencioso de machiya (casas de madera) y jardines secretos.</p>
+
+<p><span class="hist-cities-tag">NARA</span> <strong>Nara</strong> (Día 8) — La primera capital, más antigua y más pequeña que Kyoto. Famosa por los ciervos que andan libres por el parque (más de 1.200), considerados mensajeros de los dioses. El Tōdai-ji con su Gran Buda es la mayor estructura de madera del mundo. Nara tiene un ambiente más relajado y rural que Kyoto.</p>
+
+<p><span class="hist-cities-tag">OSAKA</span> <strong>Osaka</strong> (Días 12-14) — 2,7 millones de habitantes. Si Kyoto es la dama refinada, Osaka es el primo ruidoso y simpático que te invita a comer. Los osakenses tienen fama de ser más directos, graciosos y obsesionados con la comida que el resto de japoneses. Su lema es <span class="hist-term" title="'Come hasta caer'. Filosofía gastronómica de Osaka que refleja la obsesión de la ciudad por la buena comida.">kuidaore</span> ("come hasta caer"). <strong>Dotonbori</strong> es el corazón turístico con sus carteles luminosos gigantes (el hombre de Glico corriendo es el más famoso). <strong>Shinsekai</strong> es el barrio retro donde comer <span class="hist-term" title="Brochetas empanadas y fritas de carne, verdura o marisco, típicas de Osaka. Se comen con salsa tonkatsu. La regla: NO mojar dos veces en la salsa compartida.">kushikatsu</span>. Osaka también fue históricamente la capital comercial de Japón: mientras Tokyo tenía a los samurái, Osaka tenía a los comerciantes que movían el dinero.</p>`
+    },
+    {
+      num: '12',
+      title: 'La escritura japonesa: tres sistemas en uno',
+      era: '',
+      body: `<p>El japonés usa <strong>tres sistemas de escritura distintos mezclados en la misma frase</strong>. Suena absurdo, pero tiene una lógica histórica. Vamos por partes:</p>
+
+<p><strong>1. Kanji (漢字)</strong> — Son los caracteres de origen chino. Cada kanji representa un concepto o palabra. Hay miles (un adulto educado conoce unos 2.000-3.000), y cada uno puede tener varias lecturas diferentes dependiendo del contexto. Ejemplos que verás constantemente:</p>
+
+<ul class="hist-timeline">
+<li><strong>山</strong> (yama) = montaña. Lo verás en nombres como Arashiyama (嵐山, "montaña de la tormenta")</li>
+<li><strong>川</strong> (kawa/gawa) = río</li>
+<li><strong>寺</strong> (tera/ji) = templo. Por eso muchos templos acaban en -ji: Tōdai-ji, Senso-ji, Kinkaku-ji</li>
+<li><strong>神</strong> (kami/shin/jin) = dios/espíritu. Lo ves en jinja (神社, santuario)</li>
+<li><strong>駅</strong> (eki) = estación. Muy útil: es el cartel que buscas en cada parada de tren</li>
+<li><strong>入口</strong> (iriguchi) = entrada / <strong>出口</strong> (deguchi) = salida</li>
+<li><strong>男</strong> (otoko) = hombre / <strong>女</strong> (onna) = mujer — imprescindible para los baños</li>
+<li><strong>大</strong> (ō/dai) = grande. Osaka (大阪) = "gran pendiente"</li>
+<li><strong>京</strong> (kyō) = capital. Tokyo (東京) = "capital del este", Kyoto (京都) = "ciudad capital"</li>
+</ul>
+
+<p><strong>2. Hiragana (ひらがな)</strong> — Un silabario de 46 caracteres donde cada uno representa una sílaba (ka, ki, ku, ke, ko, etc.). Es curvilíneo y suave. Se usa para las partes gramaticales de la frase (conjugaciones verbales, partículas) y para palabras japonesas nativas que no tienen kanji habitual. Es lo primero que aprenden los niños japoneses. Si ves carteles escritos solo en hiragana, probablemente están dirigidos a niños.</p>
+
+<p><strong>3. Katakana (カタカナ)</strong> — Otro silabario de 46 caracteres con los mismos sonidos que el hiragana, pero con trazos más angulares y rectos. Se usa principalmente para <strong>palabras extranjeras adaptadas al japonés</strong>. Esto es lo que más te servirá como turista, porque muchas palabras que ves en katakana son préstamos del inglés. Ejemplos:</p>
+
+<ul class="hist-timeline">
+<li><strong>ホテル</strong> (hoteru) = hotel</li>
+<li><strong>レストラン</strong> (resutoran) = restaurant</li>
+<li><strong>トイレ</strong> (toire) = toilette (baño). Muy útil.</li>
+<li><strong>ビール</strong> (biiru) = beer (cerveza)</li>
+<li><strong>コーヒー</strong> (koohii) = coffee</li>
+<li><strong>タクシー</strong> (takushii) = taxi</li>
+<li><strong>コンビニ</strong> (konbini) = convenience store (tienda 24h)</li>
+<li><strong>スーパー</strong> (suupaa) = supermercado</li>
+</ul>
+
+<p><strong>4. Rōmaji</strong> — El alfabeto latino. No es un sistema de escritura japonés propiamente, pero lo encontrarás en muchos carteles, especialmente en estaciones de tren, señales turísticas y marcas. Gracias al rōmaji, puedes leer los nombres de las estaciones sin saber japonés.</p>
+
+<div class="hist-aside"><strong>🎒 Consejo práctico: cómo sobrevivir sin saber japonés</strong><br>
+La buena noticia es que no necesitas leer japonés para moverte por Japón. Todas las estaciones de tren tienen los nombres en rōmaji, Google Translate con cámara traduce carteles en tiempo real, y la mayoría de restaurantes turísticos tienen menú con fotos o en inglés. Los kanji más útiles para memorizar son 駅 (estación), 出口 (salida), 入口 (entrada), 男/女 (hombre/mujer para los baños) y 円 (yen, el símbolo de la moneda). Con esos cinco y Google Translate, vas sobrado.</div>
+
+<p>¿Por qué Japón no simplificó todo esto? Porque los kanji, aunque difíciles de aprender, son extremadamente eficientes para la lectura rápida. Un japonés puede ojear un texto y captar el significado general solo mirando los kanji, sin leer las partículas gramaticales en hiragana. Además, el japonés tiene muchos homófonos (palabras que suenan igual pero significan cosas diferentes), y los kanji eliminan la ambigüedad. La palabra "kami" puede significar dios (神), papel (紙) o pelo (髪) dependiendo del kanji. En contexto un hablante nativo distingue, pero en texto escrito los kanji lo dejan claro al instante.</p>`
+    }
+  ];
+
+  const container = document.getElementById('historia-container');
+  container.innerHTML = `
+    <div class="hist-wrap">
+      <div class="hist-hero">
+        <h1>📜 Japón: historia, cultura y claves</h1>
+        <p>Una guía para entender lo que verás en tu viaje. Desde los mitos fundacionales hasta el Japón de hoy, pasando por samurái, shōgunes, bombas atómicas y Pokémon. Toca cada sección para expandirla.</p>
+      </div>
+
+      <div class="hist-toc">
+        <div class="hist-toc-title">Índice</div>
+        <ol class="hist-toc-list">
+          ${sections.map((s, i) => `
+            <li><a href="#" onclick="event.preventDefault();document.getElementById('hist-s${i}').scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('hist-s${i}').classList.add('open')">
+              <span class="hist-toc-num">${s.num}</span>
+              ${s.title}
+            </a></li>
+          `).join('')}
+        </ol>
+      </div>
+
+      ${sections.map((s, i) => `
+        <div class="hist-section" id="hist-s${i}">
+          <div class="hist-section-head" onclick="this.parentElement.classList.toggle('open')">
+            <span class="hist-section-num">${s.num}</span>
+            <span class="hist-section-title">${s.title}</span>
+            ${s.era ? `<span class="hist-section-era">${s.era}</span>` : ''}
+            <span class="hist-section-arrow">▶</span>
+          </div>
+          <div class="hist-section-body">${s.body}</div>
+        </div>
+      `).join('')}
+
+      <button class="hist-back-top" onclick="document.getElementById('historia-container').scrollIntoView({behavior:'smooth'})">↑ Volver al índice</button>
+    </div>
+  `;
+}
+
 // Seed initial expenses (runs once)
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', () => {
@@ -6015,6 +6370,7 @@ window.addEventListener('DOMContentLoaded', () => {
   renderCeliac();
   renderBudget();
   renderGlossary();
+  renderHistoria();
   renderTips();
   renderGuide();
   renderPhrases();
