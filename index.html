@@ -547,12 +547,23 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .legend-label{flex:1;color:var(--text-muted)}
 .legend-val{font-weight:700;color:var(--text);white-space:nowrap}
 .legend-pct{font-weight:400;color:var(--text-dim);font-size:.68rem}
-.chart-bars{display:flex;flex-direction:column;gap:6px}
-.bar-row{display:flex;align-items:center;gap:.5rem}
-.bar-label{font-size:.72rem;color:var(--text-muted);min-width:46px;text-align:right}
-.bar-track{flex:1;height:16px;background:var(--surface3);border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
-.bar-val{font-size:.72rem;font-weight:700;color:var(--text);min-width:36px}
+.chart-bars{display:flex;flex-direction:column;gap:4px}
+.bar-row{display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:3px 0;border-radius:6px;transition:background .15s}
+.bar-row:active,.bar-row.bar-active{background:var(--surface2)}
+.bar-label{font-size:.72rem;color:var(--text-muted);min-width:46px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:20px;background:var(--surface3);border-radius:5px;overflow:hidden;display:flex;gap:2px}
+.bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
+.bar-seg{height:100%;transition:opacity .2s;border-radius:3px;min-width:3px}
+.bar-seg:first-child{border-radius:5px 3px 3px 5px}
+.bar-seg:last-child{border-radius:3px 5px 5px 3px}
+.bar-seg:only-child{border-radius:5px}
+.bar-val{font-size:.72rem;font-weight:700;color:var(--text);min-width:36px;flex-shrink:0}
+.bar-detail{overflow:hidden;max-height:0;transition:max-height .3s ease,opacity .2s;opacity:0;padding-left:52px}
+.bar-detail.open{max-height:200px;opacity:1;margin-bottom:4px}
+.bar-detail-inner{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 0 2px}
+.bar-detail-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text-muted)}
+.bar-detail-item .legend-dot{width:7px;height:7px}
+.bar-detail-item .detail-amt{font-weight:700;color:var(--text)}
 
 /* ===== Pre-viaje checklist ===== */
 .pv-section{margin-bottom:1.25rem}
@@ -5911,6 +5922,19 @@ function renderTools() {
 
 let fxRate = 181.5;
 let fxRateCny = 7.7; // CNY per EUR (yuanes chinos)
+
+function toggleBarDetail(id, rowEl) {
+  const detail = document.getElementById(id);
+  if (!detail) return;
+  const wasOpen = detail.classList.contains('open');
+  // Close all open details first
+  document.querySelectorAll('.bar-detail.open').forEach(d => { d.classList.remove('open'); });
+  document.querySelectorAll('.bar-row.bar-active').forEach(r => { r.classList.remove('bar-active'); });
+  if (!wasOpen) {
+    detail.classList.add('open');
+    if (rowEl) rowEl.classList.add('bar-active');
+  }
+}
 function updateFxRate(val) {
   fxRate = parseFloat(val);
   document.getElementById('fx-rate-val').textContent = fxRate;
@@ -6326,16 +6350,31 @@ function renderExpenseCharts() {
     <div class="chart-section">
       <div class="chart-title">📅 Gasto total por día</div>
       <div class="chart-bars">
-        ${dayEntries.map(([day, val]) => {
-          const pct = (val / maxDay * 100).toFixed(1);
-          return `<div class="bar-row">
-            <span class="bar-label">${day}</span>
-            <div class="bar-track">
-              <div class="bar-fill" style="width:${pct}%;background:var(--accent-orange)"></div>
-            </div>
-            <span class="bar-val">€${val.toFixed(0)}</span>
-          </div>`;
-        }).join('')}
+        ${(() => {
+          // Build per-day category breakdown for the total chart too
+          const dayAllCats = {};
+          expenses.forEach(e => {
+            const d = e.date || '??';
+            if (!dayAllCats[d]) dayAllCats[d] = {};
+            dayAllCats[d][e.cat] = (dayAllCats[d][e.cat]||0) + e.eur;
+          });
+          return dayEntries.map(([day, val], i) => {
+            const did = 'dt-' + i;
+            const cats = dayAllCats[day] || {};
+            const catList = Object.entries(cats).sort((a,b) => b[1] - a[1]);
+            const segments = catList.map(([cat, cv]) => {
+              const w = (cv / maxDay * 100).toFixed(1);
+              const color = catColors[cat] || 'var(--text-muted)';
+              return '<div class="bar-seg" style="width:' + w + '%;background:' + color + '"></div>';
+            }).join('');
+            const details = catList.map(([cat, cv]) => {
+              const color = catColors[cat] || 'var(--text-muted)';
+              return '<span class="bar-detail-item"><span class="legend-dot" style="background:' + color + '"></span>' + cat + ' <span class="detail-amt">€' + cv.toFixed(1) + '</span></span>';
+            }).join('');
+            return '<div class="bar-row" onclick="toggleBarDetail(\'' + did + '\',this)"><span class="bar-label">' + day + '</span><div class="bar-track">' + segments + '</div><span class="bar-val">€' + val.toFixed(0) + '</span></div>' +
+              '<div class="bar-detail" id="' + did + '"><div class="bar-detail-inner">' + details + '</div></div>';
+          }).join('');
+        })()}
       </div>
     </div>
     ${(() => {
@@ -6356,19 +6395,22 @@ function renderExpenseCharts() {
       return '<div class="chart-section">' +
         '<div class="chart-title">🛍️ Gasto diario (sin alojamiento ni vuelos) — €' + dTotal.toFixed(0) + ' total</div>' +
         '<div class="chart-bars">' +
-        dEntries.map(([day, val]) => {
+        dEntries.map(([day, val], i) => {
+          const did = 'dd-' + i;
           const cats = dailyCats[day] || {};
           const catList = Object.entries(cats).sort((a,b) => b[1] - a[1]);
           const segments = catList.map(([cat, cv]) => {
             const w = (cv / dMax * 100).toFixed(1);
             const color = catColors[cat] || 'var(--text-muted)';
-            return '<div style="width:' + w + '%;background:' + color + ';height:100%;flex-shrink:0" title="' + cat + ' €' + cv.toFixed(1) + '"></div>';
+            return '<div class="bar-seg" style="width:' + w + '%;background:' + color + '"></div>';
           }).join('');
-          return '<div class="bar-row">' +
-            '<span class="bar-label">' + day + '</span>' +
-            '<div class="bar-track" style="display:flex;overflow:hidden">' + segments + '</div>' +
-            '<span class="bar-val">€' + val.toFixed(0) + '</span>' +
-          '</div>';
+          const details = catList.map(([cat, cv]) => {
+            const pct = val > 0 ? ((cv/val)*100).toFixed(0) : 0;
+            const color = catColors[cat] || 'var(--text-muted)';
+            return '<span class="bar-detail-item"><span class="legend-dot" style="background:' + color + '"></span>' + cat + ' <span class="detail-amt">€' + cv.toFixed(1) + '</span> <span style="color:var(--text-dim);font-size:.65rem">(' + pct + '%)</span></span>';
+          }).join('');
+          return '<div class="bar-row" onclick="toggleBarDetail(\'' + did + '\',this)"><span class="bar-label">' + day + '</span><div class="bar-track">' + segments + '</div><span class="bar-val">€' + val.toFixed(0) + '</span></div>' +
+            '<div class="bar-detail" id="' + did + '"><div class="bar-detail-inner">' + details + '</div></div>';
         }).join('') +
         '</div></div>';
     })()}
