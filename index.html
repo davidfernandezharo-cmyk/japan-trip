@@ -5878,7 +5878,7 @@ function renderTools() {
       <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">Registra cada gasto del viaje. Se sincroniza entre dispositivos en tiempo real.</p>
       <div class="expense-add-row">
         <input type="number" id="exp-amount" placeholder="Cantidad" style="min-width:70px">
-        <select id="exp-currency"><option value="jpy">¥ JPY</option><option value="eur">€ EUR</option></select>
+        <select id="exp-currency"><option value="jpy">¥ JPY</option><option value="cny">¥ CNY</option><option value="eur">€ EUR</option></select>
         <select id="exp-cat">
           <option value="🍜 Comida">🍜 Comida</option>
           <option value="🚃 Transporte">🚃 Transporte</option>
@@ -5887,6 +5887,7 @@ function renderTools() {
           <option value="🏠 Alojamiento">🏠 Alojamiento</option>
           <option value="✈️ Vuelos">✈️ Vuelos</option>
           <option value="📦 Otros">📦 Otros</option>
+          <option value="🏧 ATM">🏧 ATM</option>
         </select>
         <select id="exp-payer">
           <option value="david">Paga: David</option>
@@ -5909,6 +5910,7 @@ function renderTools() {
 }
 
 let fxRate = 181.5;
+let fxRateCny = 7.7; // CNY per EUR (yuanes chinos)
 function updateFxRate(val) {
   fxRate = parseFloat(val);
   document.getElementById('fx-rate-val').textContent = fxRate;
@@ -5941,14 +5943,15 @@ function addExpense() {
   const payer = document.getElementById('exp-payer').value;
   const forWhom = document.getElementById('exp-for').value;
   const note = document.getElementById('exp-note').value;
-  const eur = currency === 'eur' ? amount : +(amount / fxRate).toFixed(2);
-  const jpy = currency === 'jpy' ? amount : Math.round(amount * fxRate);
+  const eur = currency === 'eur' ? amount : currency === 'cny' ? +(amount / fxRateCny).toFixed(2) : +(amount / fxRate).toFixed(2);
+  const jpy = currency === 'jpy' ? amount : currency === 'eur' ? Math.round(amount * fxRate) : Math.round(amount / fxRateCny * fxRate);
+  const cny = currency === 'cny' ? amount : 0;
   // Write to Firestore (auto-syncs to all devices)
   const expObj = {
     id: Date.now(),
     date: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short'}),
     cat, payer: payer || 'david', forWhom: forWhom || 'both',
-    note, eur, jpy, currency,
+    note, eur, jpy, cny, currency,
     createdAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
   };
   // Always save locally first (immediate feedback)
@@ -6055,8 +6058,8 @@ function renderExpenses() {
       <span class="expense-cat">${e.cat}</span>
       <span style="flex:1"></span>
       <span style="font-size:.68rem;color:var(--text-dim)">${e.date}</span>
-      <span class="expense-amount">${e.currency==='jpy' ? '¥'+e.jpy.toLocaleString() : '€'+e.eur}</span>
-      <span style="font-size:.68rem;color:var(--text-dim)">(${e.currency==='jpy' ? '€'+e.eur : '¥'+e.jpy.toLocaleString()})</span>
+      <span class="expense-amount">${e.currency==='cny' ? '¥'+(e.cny||0).toLocaleString()+' CNY' : e.currency==='jpy' ? '¥'+e.jpy.toLocaleString() : '€'+e.eur}</span>
+      <span style="font-size:.68rem;color:var(--text-dim)">(${e.currency==='cny' ? '€'+e.eur : e.currency==='jpy' ? '€'+e.eur : '¥'+e.jpy.toLocaleString()})</span>
       <span class="expense-del" onclick="deleteExpense(${e.id})">✕</span>
       ${e.note ? '<div class="expense-note">📝 '+e.note+'</div>' : ''}
     </div>`;
@@ -6129,7 +6132,7 @@ function seedExpensesFromScreenshots() {
     {id:20261114002, date:'14 nov', cat:'🏠 Alojamiento', payer:'david', forWhom:'both', note:'Wise Owl Hostel Shibuya (3 noches)', eur:147.57, jpy:26784, currency:'jpy', createdAt:new Date('2026-11-14T22:51:00Z')},
     // Nov 15
     {id:20261115001, date:'15 nov', cat:'🍜 Comida', payer:'david', forWhom:'both', note:'Owlskitchen (desayuno)', eur:3.03, jpy:550, currency:'jpy', createdAt:new Date('2026-11-15T08:05:00Z')},
-    {id:20261115002, date:'15 nov', cat:'📦 Otros', payer:'david', forWhom:'both', note:'Efectivo ATM (retirada)', eur:222.93, jpy:40463, currency:'jpy', createdAt:new Date('2026-11-15T11:10:00Z')},
+    {id:20261115002, date:'15 nov', cat:'🏧 ATM', payer:'david', forWhom:'both', note:'Efectivo ATM (retirada ¥40.463)', eur:222.93, jpy:40463, currency:'jpy', createdAt:new Date('2026-11-15T11:10:00Z')},
     {id:20261115003, date:'15 nov', cat:'🛒 Compras', payer:'david', forWhom:'both', note:'FamilyMart', eur:0.65, jpy:118, currency:'jpy', createdAt:new Date('2026-11-15T11:12:00Z')},
     {id:20261115004, date:'15 nov', cat:'🍜 Comida', payer:'david', forWhom:'both', note:'Restaurante Ueno (Hirokoji)', eur:20.88, jpy:3790, currency:'jpy', createdAt:new Date('2026-11-15T14:17:00Z')},
     {id:20261115005, date:'15 nov', cat:'🛒 Compras', payer:'david', forWhom:'both', note:'Ueno zona (tienda/vending)', eur:1.18, jpy:215, currency:'jpy', createdAt:new Date('2026-11-15T18:39:00Z')},
@@ -6157,21 +6160,32 @@ function seedExpensesFromScreenshots() {
       expensesRef.add(s).catch(err => console.warn('Seed write error:', err.message));
     }
   });
-  if (added > 0) {
+  // Fix: ATM entries que tenían cat '📦 Otros' → '🏧 ATM'
+  let fixed = 0;
+  _expenses.filter(e => e.note && e.note.includes('ATM') && e.cat === '📦 Otros').forEach(atm => {
+    atm.cat = '🏧 ATM'; fixed++;
+    if (atm._docId && expensesRef) expensesRef.doc(atm._docId).update({cat:'🏧 ATM'}).catch(e => console.warn('Fix:', e.message));
+  });
+  // Fix: tabi-shiro y SLOW HOUSE deben ser payer:'david'
+  _expenses.filter(e => e.cat === '🏠 Alojamiento' && (e.payer||'david') === 'silvi' && e.note && (e.note.includes('tabi-shiro') || e.note.includes('SLOW HOUSE'))).forEach(acc => {
+    acc.payer = 'david'; fixed++;
+    if (acc._docId && expensesRef) expensesRef.doc(acc._docId).update({payer:'david'}).catch(e => console.warn('Fix:', e.message));
+  });
+  if (added > 0 || fixed > 0) {
     try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
     renderExpenses();
   }
   localStorage.setItem('jp-seeded-v5', '1');
-  console.log('💸 Seeded ' + added + ' expenses from screenshots (' + seeds.length + ' total, ' + (seeds.length - added) + ' skipped as dupes)');
+  console.log('💸 Seeded ' + added + ' David expenses, fixed ' + fixed);
 }
 
 // ===================== SEED SILVIA EXPENSES =====================
 function seedSilviaExpenses() {
-  if (localStorage.getItem('jp-seeded-silvi-v3')) return;
+  if (localStorage.getItem('jp-seeded-silvi-v4')) return;
   const existingIds = new Set(_expenses.map(e => e.id));
   const seeds = [
     // Nov 14
-    {id:20261114101, date:'14 nov', cat:'📦 Otros', payer:'silvi', forWhom:'both', note:'Efectivo ATM (Silvia)', eur:3.31, jpy:600, currency:'jpy', createdAt:new Date('2026-11-14T07:22:00Z')},
+    {id:20261114101, date:'14 nov', cat:'🏧 ATM', payer:'silvi', forWhom:'both', note:'Efectivo ATM Shanghai (Silvia ¥600 CNY)', eur:77.92, jpy:14138, cny:600, currency:'cny', createdAt:new Date('2026-11-14T07:22:00Z')},
     {id:20261114102, date:'14 nov', cat:'🍜 Comida', payer:'silvi', forWhom:'both', note:'Ronjisibuya (cena Shibuya)', eur:20.85, jpy:3784, currency:'jpy', createdAt:new Date('2026-11-14T22:31:00Z')},
     // Nov 15
     {id:20261115101, date:'15 nov', cat:'🍜 Comida', payer:'silvi', forWhom:'both', note:'Owlskitchen (desayuno)', eur:3.03, jpy:550, currency:'jpy', createdAt:new Date('2026-11-15T08:19:00Z')},
@@ -6203,19 +6217,31 @@ function seedSilviaExpenses() {
       expensesRef.add(s).catch(err => console.warn('Seed write error:', err.message));
     }
   });
-  // Fix: Owlskitchens anteriores con forWhom incorrecto → todo es 'both' (excepto vuelos)
+  // Fix: Owlskitchens → forWhom:'both' (todo a medias excepto vuelos)
+  let fixed = 0;
   _expenses.filter(e => e.jpy === 550 && e.date === '15 nov' && e.note && e.note.includes('Owl') && e.forWhom !== 'both').forEach(owl => {
-    owl.forWhom = 'both';
-    if (owl._docId && expensesRef) {
-      expensesRef.doc(owl._docId).update({forWhom:'both'}).catch(e => console.warn('Fix update error:', e.message));
-    }
+    owl.forWhom = 'both'; fixed++;
+    if (owl._docId && expensesRef) expensesRef.doc(owl._docId).update({forWhom:'both'}).catch(e => console.warn('Fix:', e.message));
   });
-  if (added > 0) {
+  // Fix: ATM Shanghai ¥600 era CNY no JPY → corregir moneda y EUR
+  _expenses.filter(e => e.id === 20261114101 || (e.cat === '🏧 ATM' && e.payer === 'silvi' && e.date === '14 nov' && e.jpy === 600 && e.currency !== 'cny')).forEach(atm => {
+    atm.currency = 'cny'; atm.cny = 600; atm.eur = 77.92; atm.jpy = 14138;
+    atm.note = 'Efectivo ATM Shanghai (Silvia ¥600 CNY)'; fixed++;
+    if (atm._docId && expensesRef) expensesRef.doc(atm._docId).update({currency:'cny', cny:600, eur:77.92, jpy:14138, note:atm.note}).catch(e => console.warn('Fix CNY:', e.message));
+  });
+  // Fix: eliminar duplicados de tabi-shiro/SLOW HOUSE que se añadieron como Silvia por error
+  const dupsToRemove = _expenses.filter(e => e.cat === '🏠 Alojamiento' && (e.payer||'david') === 'silvi' && e.note && (e.note.includes('tabi-shiro') || e.note.includes('SLOW HOUSE')));
+  dupsToRemove.forEach(dup => {
+    const idx = _expenses.indexOf(dup);
+    if (idx !== -1) { _expenses.splice(idx, 1); fixed++; }
+    if (dup._docId && expensesRef) expensesRef.doc(dup._docId).delete().catch(e => console.warn('Fix delete:', e.message));
+  });
+  if (added > 0 || fixed > 0) {
     try { localStorage.setItem('jp-expenses', JSON.stringify(_expenses)); } catch(e) {}
     renderExpenses();
   }
-  localStorage.setItem('jp-seeded-silvi-v3', '1');
-  console.log('💸 Seeded ' + added + ' Silvia expenses');
+  localStorage.setItem('jp-seeded-silvi-v4', '1');
+  console.log('💸 Seeded ' + added + ' Silvia expenses, fixed ' + fixed);
 }
 
 // ===================== EXPENSE CHARTS =====================
@@ -6240,7 +6266,8 @@ function renderExpenseCharts() {
     '🛒 Compras': 'var(--accent-green)',
     '🏠 Alojamiento': 'var(--accent-pink)',
     '✈️ Vuelos': 'var(--accent-cyan)',
-    '📦 Otros': 'var(--accent-gold)'
+    '📦 Otros': 'var(--accent-gold)',
+    '🏧 ATM': '#adb5bd'
   };
 
   // Daily spending
@@ -6297,7 +6324,7 @@ function renderExpenseCharts() {
       </div>
     </div>
     <div class="chart-section">
-      <div class="chart-title">📅 Gasto por día</div>
+      <div class="chart-title">📅 Gasto total por día</div>
       <div class="chart-bars">
         ${dayEntries.map(([day, val]) => {
           const pct = (val / maxDay * 100).toFixed(1);
@@ -6311,6 +6338,40 @@ function renderExpenseCharts() {
         }).join('')}
       </div>
     </div>
+    ${(() => {
+      // Daily spending excluding alojamiento & vuelos
+      const dailyExp = {};
+      const dailyCats = {};
+      const skipCats = new Set(['🏠 Alojamiento', '✈️ Vuelos']);
+      expenses.filter(e => !skipCats.has(e.cat)).forEach(e => {
+        const d = e.date || '??';
+        dailyExp[d] = (dailyExp[d]||0) + e.eur;
+        if (!dailyCats[d]) dailyCats[d] = {};
+        dailyCats[d][e.cat] = (dailyCats[d][e.cat]||0) + e.eur;
+      });
+      const dEntries = Object.entries(dailyExp);
+      if (dEntries.length === 0) return '';
+      const dMax = Math.max(...dEntries.map(d => d[1]), 1);
+      const dTotal = dEntries.reduce((s, d) => s + d[1], 0);
+      return '<div class="chart-section">' +
+        '<div class="chart-title">🛍️ Gasto diario (sin alojamiento ni vuelos) — €' + dTotal.toFixed(0) + ' total</div>' +
+        '<div class="chart-bars">' +
+        dEntries.map(([day, val]) => {
+          const cats = dailyCats[day] || {};
+          const catList = Object.entries(cats).sort((a,b) => b[1] - a[1]);
+          const segments = catList.map(([cat, cv]) => {
+            const w = (cv / dMax * 100).toFixed(1);
+            const color = catColors[cat] || 'var(--text-muted)';
+            return '<div style="width:' + w + '%;background:' + color + ';height:100%;flex-shrink:0" title="' + cat + ' €' + cv.toFixed(1) + '"></div>';
+          }).join('');
+          return '<div class="bar-row">' +
+            '<span class="bar-label">' + day + '</span>' +
+            '<div class="bar-track" style="display:flex;overflow:hidden">' + segments + '</div>' +
+            '<span class="bar-val">€' + val.toFixed(0) + '</span>' +
+          '</div>';
+        }).join('') +
+        '</div></div>';
+    })()}
   `;
 }
 
